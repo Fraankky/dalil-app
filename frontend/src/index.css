@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-neutral-900 antialiased;
+  }
+}
+
+@layer components {
+  .arabic-text {
+    direction: rtl;
+    font-family: "Scheherazade New", "Noto Naskh Arabic", serif;
+    @apply text-lg leading-loose;
+  }
+}
