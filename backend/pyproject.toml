@@ -12,15 +12,15 @@ dependencies = [
     "alembic>=1.13.1",
     "pydantic>=2.6.1",
     "pydantic-settings>=2.1.0",
-    "sentence-transformers>=2.5.1",
-    "torch>=2.2.1",
+    "sentence-transformers>=3.4.0",
+    "torch>=2.9.0",
     "celery[redis]>=5.3.6",
     "redis>=5.0.1",
     "python-dotenv>=1.0.1",
     "httpx>=0.27.0",
     "python-multipart>=0.0.9",
     "numpy>=1.26.4",
-    "scikit-learn>=1.4.1",
+    "scikit-learn>=1.5.0",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +56,9 @@ known-first-party = ["app"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.setuptools.packages.find]
+include = ["app", "app.*"]
 
 [tool.mypy]
 strict = true
