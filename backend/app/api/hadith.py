@@ -32,7 +32,7 @@ async def get_hadith_list(
     collection_slug: str,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, le=100),
-    book_id: int = Query(None),
+    book_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     coll_result = await db.execute(
