@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -78,4 +78,4 @@ class StatsResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

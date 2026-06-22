@@ -53,7 +53,9 @@ def test_rows_missing_embeddings_filters_by_text_hash() -> None:
 
     rows = _rows_missing_embeddings(session, "quran", 10)
 
-    assert len(rows) == 2
+    query, params = _exec_args(session, 0)
+    assert "LIMIT :fetch_limit" in str(query)
+    assert params["fetch_limit"] == 30
     assert [row["source_id"] for row in rows] == [2, 3]
 
 
@@ -75,20 +77,20 @@ def test_upsert_embeddings_uses_safe_vector_cast_and_produces_correct_hash() -> 
 
     assert count == 1
     assert session.commit.called
+    assert session.execute.call_count == 1
 
-    delete_args = _exec_args(session, 0)
-    insert_args = _exec_args(session, 1)
-
+    query, params = _exec_args(session, 0)
     document = build_document_text("الصبر جميل", "Patience is beautiful")
 
-    assert "DELETE FROM embeddings" in str(delete_args)
-    assert delete_args[1]["source_type"] == "quran"
-    assert delete_args[1]["source_id"] == 7
-
-    assert "CAST(:embedding AS vector)" in str(insert_args)
-    assert ":embedding::vector" not in str(insert_args)
-    assert insert_args[1]["embedding"] == _vector_literal([0.1, -0.2, 0.3])
-    assert insert_args[1]["text_hash"] == text_hash(document)
+    assert "INSERT INTO embeddings" in str(query)
+    assert "ON CONFLICT (source_type, source_id, model_version)" in str(query)
+    assert "DO UPDATE SET" in str(query)
+    assert "CAST(:embedding AS vector)" in str(query)
+    assert ":embedding::vector" not in str(query)
+    assert params["embedding"] == _vector_literal([0.1, -0.2, 0.3])
+    assert params["text_hash"] == text_hash(document)
+    assert params["source_type"] == "quran"
+    assert params["source_id"] == 7
 
 
 def _mock_session(rows: list[dict]) -> MagicMock:

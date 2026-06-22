@@ -22,6 +22,7 @@ def _rows_missing_embeddings(
     source_type: str,
     limit: int,
 ) -> list[dict[str, Any]]:
+    fetch_limit = limit * 3
     if source_type == "quran":
         query = text(
             """
@@ -35,7 +36,9 @@ def _rows_missing_embeddings(
               ON e.source_type = 'quran'
              AND e.source_id = v.id
              AND e.model_version = :model_version
+            WHERE e.id IS NULL OR e.text_hash IS NOT NULL
             ORDER BY v.id
+            LIMIT :fetch_limit
             """
         )
     else:
@@ -51,12 +54,17 @@ def _rows_missing_embeddings(
               ON e.source_type = 'hadith'
              AND e.source_id = h.id
              AND e.model_version = :model_version
+            WHERE e.id IS NULL OR e.text_hash IS NOT NULL
             ORDER BY h.id
+            LIMIT :fetch_limit
             """
         )
 
-    rows = []
-    for row in session.execute(query, {"model_version": settings.embedding_model}).mappings():
+    rows: list[dict[str, Any]] = []
+    for row in session.execute(
+        query,
+        {"model_version": settings.embedding_model, "fetch_limit": fetch_limit},
+    ).mappings():
         row_dict = dict(row)
         document = build_document_text(row_dict["text_arabic"], row_dict.get("text_translation"))
         if row_dict.get("existing_text_hash") == text_hash(document):
@@ -79,25 +87,12 @@ def _upsert_embeddings(
         session.execute(
             text(
                 """
-                DELETE FROM embeddings
-                WHERE source_type = :source_type
-                  AND source_id = :source_id
-                  AND model_version = :model_version
-                """
-            ),
-            {
-                "source_type": source_type,
-                "source_id": row["source_id"],
-                "model_version": settings.embedding_model,
-            },
-        )
-        session.execute(
-            text(
-                """
                 INSERT INTO embeddings (source_type, source_id, embedding, text_hash, model_version)
                 VALUES (
                     :source_type, :source_id, CAST(:embedding AS vector), :text_hash, :model_version
                 )
+                ON CONFLICT (source_type, source_id, model_version)
+                DO UPDATE SET embedding = EXCLUDED.embedding, text_hash = EXCLUDED.text_hash
                 """
             ),
             {
