@@ -43,6 +43,12 @@ def test_search_query_aligns_quran_and_hadith_union_columns() -> None:
         assert nullable_quran_column in SEARCH_QUERY
 
 
+def test_search_queries_cast_embedding_with_safe_bind_param_syntax() -> None:
+    for query in (SEARCH_QUERY, COUNT_QUERY):
+        assert "SELECT CAST(:embedding AS vector) AS vec" in query
+        assert ":embedding::vector" not in query
+
+
 def test_search_params_include_hadith_collection_filter() -> None:
     params = _search_params(
         embedding_value="[0.1]",

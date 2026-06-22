@@ -95,7 +95,9 @@ def _upsert_embeddings(
             text(
                 """
                 INSERT INTO embeddings (source_type, source_id, embedding, text_hash, model_version)
-                VALUES (:source_type, :source_id, :embedding::vector, :text_hash, :model_version)
+                VALUES (
+                    :source_type, :source_id, CAST(:embedding AS vector), :text_hash, :model_version
+                )
                 """
             ),
             {

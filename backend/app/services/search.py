@@ -8,7 +8,7 @@ from app.services.embedding import embed_query
 
 SEARCH_QUERY = """
 WITH query_embedding AS (
-    SELECT :embedding::vector AS vec
+    SELECT CAST(:embedding AS vector) AS vec
 ),
 vector_results AS (
     SELECT
@@ -93,7 +93,7 @@ LIMIT :limit OFFSET :offset
 
 COUNT_QUERY = """
 WITH query_embedding AS (
-    SELECT :embedding::vector AS vec
+    SELECT CAST(:embedding AS vector) AS vec
 )
 SELECT COUNT(*) AS total
 FROM embeddings e, query_embedding qe

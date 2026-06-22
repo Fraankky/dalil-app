@@ -113,6 +113,7 @@ def test_upsert_embeddings_casts_pgvector_literal_and_replaces_stale_rows() -> N
     assert "DELETE FROM embeddings" in delete_query
     assert delete_params["source_type"] == "quran"
     assert delete_params["source_id"] == 7
-    assert "VALUES (:source_type, :source_id, :embedding::vector" in insert_query
+    assert "CAST(:embedding AS vector)" in insert_query
+    assert ":embedding::vector" not in insert_query
     assert insert_params["embedding"] == _vector_literal([0.1, -0.2, 0.3])
     assert insert_params["text_hash"] == text_hash(document)
