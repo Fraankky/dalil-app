@@ -18,6 +18,17 @@ vector_results AS (
     FROM embeddings e, query_embedding qe
     WHERE (:source_quran OR e.source_type = 'hadith')
       AND (:source_hadith OR e.source_type = 'quran')
+      AND (
+          e.source_type != 'hadith'
+          OR :all_hadith_collections
+          OR EXISTS (
+              SELECT 1
+              FROM hadith h
+              JOIN hadith_collections hc ON hc.id = h.collection_id
+              WHERE h.id = e.source_id
+                AND hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))
+          )
+      )
       AND 1 - (e.embedding <=> qe.vec) >= :min_score
     ORDER BY e.embedding <=> qe.vec
     LIMIT :candidate_limit
@@ -31,6 +42,12 @@ quran_results AS (
         s.name_english AS surah_name,
         s.id AS surah_number,
         v.verse_number,
+        NULL::TEXT AS collection_slug,
+        NULL::TEXT AS collection_name,
+        NULL::TEXT AS book_name,
+        NULL::TEXT AS hadith_number,
+        NULL::TEXT AS chapter_name,
+        NULL::TEXT AS grade,
         v.text_arabic,
         v.text_translation
     FROM vector_results vr
@@ -38,16 +55,19 @@ quran_results AS (
     JOIN surahs s ON s.id = v.surah_id
     WHERE vr.source_type = 'quran'
 ),
-combined AS (
+hadith_results AS (
     SELECT
         'hadith' AS type,
         vr.source_id::INT AS source_id,
         vr.score,
-        h.id AS hadith_id,
+        NULL::INT AS verse_id,
+        NULL::TEXT AS surah_name,
+        NULL::INT AS surah_number,
+        NULL::INT AS verse_number,
         hc.slug AS collection_slug,
         hc.name_eng AS collection_name,
         hb.name_eng AS book_name,
-        h.hadith_number,
+        h.hadith_number::TEXT AS hadith_number,
         h.chapter_name_eng AS chapter_name,
         h.grade,
         h.text_arabic,
@@ -58,6 +78,9 @@ combined AS (
     LEFT JOIN hadith_books hb
         ON hb.collection_id = h.collection_id AND hb.book_number = h.chapter_id
     WHERE vr.source_type = 'hadith'
+),
+combined AS (
+    SELECT * FROM hadith_results
 
     UNION ALL
 
@@ -76,6 +99,17 @@ SELECT COUNT(*) AS total
 FROM embeddings e, query_embedding qe
 WHERE (:source_quran OR e.source_type = 'hadith')
   AND (:source_hadith OR e.source_type = 'quran')
+  AND (
+      e.source_type != 'hadith'
+      OR :all_hadith_collections
+      OR EXISTS (
+          SELECT 1
+          FROM hadith h
+          JOIN hadith_collections hc ON hc.id = h.collection_id
+          WHERE h.id = e.source_id
+            AND hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))
+      )
+  )
   AND 1 - (e.embedding <=> qe.vec) >= :min_score
 """
 
@@ -103,6 +137,30 @@ def _vector_literal(values: list[float]) -> str:
     return "[" + ",".join(str(float(value)) for value in values) + "]"
 
 
+def _search_params(
+    embedding_value: str,
+    sources: list[str] | None,
+    min_score: float,
+    candidate_limit: int,
+    limit: int,
+    offset: int,
+) -> dict[str, object]:
+    source_quran, source_hadith = _source_flags(sources)
+    hadith_collections = [source for source in (sources or []) if source in HADITH_SOURCES]
+
+    return {
+        "embedding": embedding_value,
+        "source_quran": source_quran,
+        "source_hadith": source_hadith,
+        "all_hadith_collections": not hadith_collections,
+        "hadith_collections": hadith_collections,
+        "min_score": min_score,
+        "candidate_limit": candidate_limit,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
 async def semantic_search(
     db: AsyncSession,
     query: str,
@@ -113,19 +171,16 @@ async def semantic_search(
 ) -> SearchResponse:
     embedding = embed_query(query)
     embedding_value = _vector_literal(embedding.tolist())
-    source_quran, source_hadith = _source_flags(sources)
 
     candidate_limit = (offset + limit) * 5  # Oversample for accurate pagination
-
-    params = {
-        "embedding": embedding_value,
-        "source_quran": source_quran,
-        "source_hadith": source_hadith,
-        "min_score": min_score,
-        "candidate_limit": candidate_limit,
-        "limit": limit,
-        "offset": offset,
-    }
+    params = _search_params(
+        embedding_value=embedding_value,
+        sources=sources,
+        min_score=min_score,
+        candidate_limit=candidate_limit,
+        limit=limit,
+        offset=offset,
+    )
 
     result = await db.execute(text(SEARCH_QUERY), params)
     rows = result.mappings().all()

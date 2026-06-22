@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.celery_app import celery_app
 from app.core.config import settings
 from app.services.embedding import embed_documents, text_hash
+from app.services.search import _vector_literal
 
 
 def build_document_text(arabic: str, translation: str | None) -> str:
@@ -24,39 +25,46 @@ def _rows_missing_embeddings(
     if source_type == "quran":
         query = text(
             """
-            SELECT v.id AS source_id, v.text_arabic, v.text_translation
+            SELECT
+                v.id AS source_id,
+                v.text_arabic,
+                v.text_translation,
+                e.text_hash AS existing_text_hash
             FROM verses v
             LEFT JOIN embeddings e
               ON e.source_type = 'quran'
              AND e.source_id = v.id
              AND e.model_version = :model_version
-            WHERE e.id IS NULL
             ORDER BY v.id
-            LIMIT :limit
             """
         )
     else:
         query = text(
             """
-            SELECT h.id AS source_id, h.text_arabic, h.text_english AS text_translation
+            SELECT
+                h.id AS source_id,
+                h.text_arabic,
+                h.text_english AS text_translation,
+                e.text_hash AS existing_text_hash
             FROM hadith h
             LEFT JOIN embeddings e
               ON e.source_type = 'hadith'
              AND e.source_id = h.id
              AND e.model_version = :model_version
-            WHERE e.id IS NULL
             ORDER BY h.id
-            LIMIT :limit
             """
         )
 
-    return [
-        dict(row)
-        for row in session.execute(
-            query,
-            {"model_version": settings.embedding_model, "limit": limit},
-        ).mappings()
-    ]
+    rows = []
+    for row in session.execute(query, {"model_version": settings.embedding_model}).mappings():
+        row_dict = dict(row)
+        document = build_document_text(row_dict["text_arabic"], row_dict.get("text_translation"))
+        if row_dict.get("existing_text_hash") == text_hash(document):
+            continue
+        rows.append(row_dict)
+        if len(rows) == limit:
+            break
+    return rows
 
 
 def _upsert_embeddings(
@@ -71,15 +79,29 @@ def _upsert_embeddings(
         session.execute(
             text(
                 """
-                INSERT INTO embeddings (source_type, source_id, embedding, text_hash, model_version)
-                VALUES (:source_type, :source_id, :embedding, :text_hash, :model_version)
-                ON CONFLICT DO NOTHING
+                DELETE FROM embeddings
+                WHERE source_type = :source_type
+                  AND source_id = :source_id
+                  AND model_version = :model_version
                 """
             ),
             {
                 "source_type": source_type,
                 "source_id": row["source_id"],
-                "embedding": vector,
+                "model_version": settings.embedding_model,
+            },
+        )
+        session.execute(
+            text(
+                """
+                INSERT INTO embeddings (source_type, source_id, embedding, text_hash, model_version)
+                VALUES (:source_type, :source_id, :embedding::vector, :text_hash, :model_version)
+                """
+            ),
+            {
+                "source_type": source_type,
+                "source_id": row["source_id"],
+                "embedding": _vector_literal(vector),
                 "text_hash": text_hash(document),
                 "model_version": settings.embedding_model,
             },
