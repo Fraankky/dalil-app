@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -11,21 +11,21 @@ class SearchResult(BaseModel):
     relevance: int  # 0-100
 
     # Qur'an fields
-    surah_name: Optional[str] = None
-    surah_number: Optional[int] = None
-    verse_number: Optional[int] = None
+    surah_name: str | None = None
+    surah_number: int | None = None
+    verse_number: int | None = None
 
     # Hadith fields
-    collection_slug: Optional[str] = None
-    collection_name: Optional[str] = None
-    book_name: Optional[str] = None
-    hadith_number: Optional[str] = None
-    chapter_name: Optional[str] = None
-    grade: Optional[str] = None
+    collection_slug: str | None = None
+    collection_name: str | None = None
+    book_name: str | None = None
+    hadith_number: str | None = None
+    chapter_name: str | None = None
+    grade: str | None = None
 
     # Common
     text_arabic: str
-    text_translation: Optional[str] = None
+    text_translation: str | None = None
 
 
 class SearchResponse(BaseModel):
@@ -45,22 +45,22 @@ class VerseResponse(BaseModel):
     surah_number: int
     verse_number: int
     text_arabic: str
-    text_translation: Optional[str] = None
-    juz: Optional[int] = None
-    revelation_type: Optional[str] = None
+    text_translation: str | None = None
+    juz: int | None = None
+    revelation_type: str | None = None
 
 
 class HadithResponse(BaseModel):
     id: int
     collection_name: str
     collection_slug: str
-    book_name: Optional[str] = None
+    book_name: str | None = None
     hadith_number: str
-    chapter_name_eng: Optional[str] = None
-    chapter_name_ar: Optional[str] = None
+    chapter_name_eng: str | None = None
+    chapter_name_ar: str | None = None
     text_arabic: str
-    text_english: Optional[str] = None
-    grade: Optional[str] = None
+    text_english: str | None = None
+    grade: str | None = None
 
 
 class StatsResponse(BaseModel):
@@ -77,5 +77,5 @@ class StatsResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
-    detail: Optional[str] = None
+    detail: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
