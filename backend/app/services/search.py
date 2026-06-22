@@ -1,14 +1,10 @@
 """Semantic search service using pgvector."""
 
-from typing import Optional
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.models.schemas import SearchResult, SearchResponse
+from app.models.schemas import SearchResponse, SearchResult
 from app.services.embedding import embed_query
-
 
 SEARCH_QUERY = """
 WITH query_embedding AS (
@@ -59,7 +55,8 @@ combined AS (
     FROM vector_results vr
     JOIN hadith h ON h.id = vr.source_id
     JOIN hadith_collections hc ON hc.id = h.collection_id
-    LEFT JOIN hadith_books hb ON hb.collection_id = h.collection_id AND hb.book_number = h.chapter_id
+    LEFT JOIN hadith_books hb
+        ON hb.collection_id = h.collection_id AND hb.book_number = h.chapter_id
     WHERE vr.source_type = 'hadith'
 
     UNION ALL
@@ -82,25 +79,46 @@ WHERE (:source_quran OR e.source_type = 'hadith')
   AND 1 - (e.embedding <=> qe.vec) >= :min_score
 """
 
+HADITH_SOURCES = {
+    "bukhari",
+    "muslim",
+    "abudawud",
+    "tirmidhi",
+    "nasai",
+    "ibnmajah",
+    "malik",
+    "nawawi40",
+}
+
+
+def _source_flags(sources: list[str] | None) -> tuple[bool, bool]:
+    if sources is None:
+        return True, True
+    source_quran = "quran" in sources
+    source_hadith = any(source in HADITH_SOURCES for source in sources)
+    return source_quran, source_hadith
+
+
+def _vector_literal(values: list[float]) -> str:
+    return "[" + ",".join(str(float(value)) for value in values) + "]"
+
 
 async def semantic_search(
     db: AsyncSession,
     query: str,
-    sources: Optional[list[str]] = None,
+    sources: list[str] | None = None,
     limit: int = 10,
     offset: int = 0,
     min_score: float = 0.3,
 ) -> SearchResponse:
     embedding = embed_query(query)
-    embedding_list = embedding.tolist()
-
-    source_quran = sources is None or "quran" in sources
-    source_hadith = sources is None or any(s in sources for s in ["bukhari", "muslim", "abudawud", "tirmidhi", "nasai", "ibnmajah", "malik", "nawawi40"])
+    embedding_value = _vector_literal(embedding.tolist())
+    source_quran, source_hadith = _source_flags(sources)
 
     candidate_limit = (offset + limit) * 5  # Oversample for accurate pagination
 
     params = {
-        "embedding": embedding_list,
+        "embedding": embedding_value,
         "source_quran": source_quran,
         "source_hadith": source_hadith,
         "min_score": min_score,
@@ -115,23 +133,25 @@ async def semantic_search(
     results = []
     for row in rows:
         score = row["score"]
-        results.append(SearchResult(
-            type=row["type"],
-            source_id=row["source_id"],
-            score=round(score, 4),
-            relevance=round(score * 100),
-            surah_name=row.get("surah_name"),
-            surah_number=row.get("surah_number"),
-            verse_number=row.get("verse_number"),
-            collection_slug=row.get("collection_slug"),
-            collection_name=row.get("collection_name"),
-            book_name=row.get("book_name"),
-            hadith_number=row.get("hadith_number"),
-            chapter_name=row.get("chapter_name"),
-            grade=row.get("grade"),
-            text_arabic=row["text_arabic"],
-            text_translation=row.get("text_translation"),
-        ))
+        results.append(
+            SearchResult(
+                type=row["type"],
+                source_id=row["source_id"],
+                score=round(score, 4),
+                relevance=round(score * 100),
+                surah_name=row.get("surah_name"),
+                surah_number=row.get("surah_number"),
+                verse_number=row.get("verse_number"),
+                collection_slug=row.get("collection_slug"),
+                collection_name=row.get("collection_name"),
+                book_name=row.get("book_name"),
+                hadith_number=row.get("hadith_number"),
+                chapter_name=row.get("chapter_name"),
+                grade=row.get("grade"),
+                text_arabic=row["text_arabic"],
+                text_translation=row.get("text_translation"),
+            )
+        )
 
     # Count total
     count_result = await db.execute(text(COUNT_QUERY), params)
@@ -150,7 +170,7 @@ async def semantic_search(
 
 def _detect_language(text: str) -> str:
     """Simple heuristic language detection."""
-    arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06ff')
+    arabic_chars = sum(1 for c in text if "\u0600" <= c <= "\u06ff")
     if arabic_chars > len(text) * 0.3:
         return "ar"
     return "en"
