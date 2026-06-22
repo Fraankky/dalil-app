@@ -1,12 +1,12 @@
 """Hadith browse API."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.models import HadithCollection, HadithBook, Hadith
+from app.models.models import Hadith, HadithCollection
 from app.models.schemas import HadithResponse
 
 router = APIRouter(prefix="/hadith", tags=["hadith"])
@@ -48,10 +48,15 @@ async def get_hadith_list(
     count_query = select(func.count(Hadith.id)).where(Hadith.collection_id == collection.id)
 
     if book_id:
-        query = query.where(Hadith.book_id == book_id)
-        count_query = count_query.where(Hadith.book_id == book_id)
+        query = query.where(Hadith.chapter_id == book_id)
+        count_query = count_query.where(Hadith.chapter_id == book_id)
 
-    query = query.offset(offset).limit(per_page)
+    query = (
+        query.options(selectinload(Hadith.book))
+        .order_by(Hadith.chapter_id, Hadith.id)
+        .offset(offset)
+        .limit(per_page)
+    )
 
     result = await db.execute(query)
     hadith_list = result.scalars().all()
