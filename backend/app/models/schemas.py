@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -68,6 +68,9 @@ class StatsResponse(BaseModel):
     total_surahs: int
     total_hadith: int
     total_collections: int
+    total_embeddings: int
+    quran_embeddings: int
+    hadith_embeddings: int
     model_name: str
     model_dim: int
 

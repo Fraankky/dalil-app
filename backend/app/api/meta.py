@@ -1,12 +1,12 @@
 """Stats and health API."""
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
 from app.core.config import settings
-from app.models.models import Verse, Surah, Hadith, HadithCollection
+from app.core.database import get_db
+from app.models.models import Embedding, Hadith, HadithCollection, Surah, Verse
 from app.models.schemas import StatsResponse
 
 router = APIRouter(tags=["meta"])
@@ -18,12 +18,22 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     total_surahs = (await db.execute(select(func.count(Surah.id)))).scalar() or 0
     total_hadith = (await db.execute(select(func.count(Hadith.id)))).scalar() or 0
     total_collections = (await db.execute(select(func.count(HadithCollection.id)))).scalar() or 0
+    total_embeddings = (await db.execute(select(func.count(Embedding.id)))).scalar() or 0
+    quran_embeddings = (
+        await db.execute(select(func.count(Embedding.id)).where(Embedding.source_type == "quran"))
+    ).scalar() or 0
+    hadith_embeddings = (
+        await db.execute(select(func.count(Embedding.id)).where(Embedding.source_type == "hadith"))
+    ).scalar() or 0
 
     return StatsResponse(
         total_verses=total_verses,
         total_surahs=total_surahs,
         total_hadith=total_hadith,
         total_collections=total_collections,
+        total_embeddings=total_embeddings,
+        quran_embeddings=quran_embeddings,
+        hadith_embeddings=hadith_embeddings,
         model_name=settings.embedding_model,
         model_dim=settings.embedding_dim,
     )
