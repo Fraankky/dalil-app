@@ -113,10 +113,19 @@ def _upsert_embeddings(
     return count
 
 
+_engine = None
+
+
+def _get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_engine(settings.database_url_sync)
+    return _engine
+
+
 def _embed_source(source_type: str, batch_size: int | None = None) -> int:
     size = batch_size or settings.embedding_batch_size
-    engine = create_engine(settings.database_url_sync)
-    with Session(engine) as session:
+    with Session(_get_engine()) as session:
         rows = _rows_missing_embeddings(session, source_type, size)
         if not rows:
             return 0
@@ -138,8 +147,8 @@ def embed_hadith(batch_size: int | None = None) -> int:
 
 
 @celery_app.task(name="app.tasks.embeddings.embed_all")  # type: ignore[untyped-decorator]
-def embed_all(batch_size: int | None = None) -> dict[str, int]:
+def embed_all(batch_size: int | None = None) -> dict[str, str]:
     return {
-        "quran": embed_quran.run(batch_size),
-        "hadith": embed_hadith.run(batch_size),
+        "quran": embed_quran.delay(batch_size).id,
+        "hadith": embed_hadith.delay(batch_size).id,
     }

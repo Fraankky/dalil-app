@@ -6,7 +6,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.schemas import SearchResponse, SearchResult
 from app.services.embedding import embed_query
 
-SEARCH_QUERY = """
+_VECTOR_JOIN = """
+    FROM embeddings e
+    CROSS JOIN query_embedding qe
+    LEFT JOIN hadith h ON h.id = e.source_id
+    LEFT JOIN hadith_collections hc ON hc.id = h.collection_id
+    WHERE (:source_quran OR e.source_type = 'hadith')
+      AND (:source_hadith OR e.source_type = 'quran')
+      AND 1 - (e.embedding <=> qe.vec) >= :min_score
+      AND (
+          e.source_type != 'hadith'
+          OR :all_hadith_collections
+          OR hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))
+      )
+"""
+
+SEARCH_QUERY = f"""
 WITH query_embedding AS (
     SELECT CAST(:embedding AS vector) AS vec
 ),
@@ -15,21 +30,7 @@ vector_results AS (
         e.source_type,
         e.source_id,
         1 - (e.embedding <=> qe.vec) AS score
-    FROM embeddings e, query_embedding qe
-    WHERE (:source_quran OR e.source_type = 'hadith')
-      AND (:source_hadith OR e.source_type = 'quran')
-      AND (
-          e.source_type != 'hadith'
-          OR :all_hadith_collections
-          OR EXISTS (
-              SELECT 1
-              FROM hadith h
-              JOIN hadith_collections hc ON hc.id = h.collection_id
-              WHERE h.id = e.source_id
-                AND hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))
-          )
-      )
-      AND 1 - (e.embedding <=> qe.vec) >= :min_score
+{_VECTOR_JOIN}
     ORDER BY e.embedding <=> qe.vec
     LIMIT :candidate_limit
 ),
@@ -91,26 +92,12 @@ ORDER BY score DESC
 LIMIT :limit OFFSET :offset
 """
 
-COUNT_QUERY = """
+COUNT_QUERY = f"""
 WITH query_embedding AS (
     SELECT CAST(:embedding AS vector) AS vec
 )
 SELECT COUNT(*) AS total
-FROM embeddings e, query_embedding qe
-WHERE (:source_quran OR e.source_type = 'hadith')
-  AND (:source_hadith OR e.source_type = 'quran')
-  AND (
-      e.source_type != 'hadith'
-      OR :all_hadith_collections
-      OR EXISTS (
-          SELECT 1
-          FROM hadith h
-          JOIN hadith_collections hc ON hc.id = h.collection_id
-          WHERE h.id = e.source_id
-            AND hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))
-      )
-  )
-  AND 1 - (e.embedding <=> qe.vec) >= :min_score
+{_VECTOR_JOIN}
 """
 
 HADITH_SOURCES = {
