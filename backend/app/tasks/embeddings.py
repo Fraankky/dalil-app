@@ -103,17 +103,17 @@ def _embed_source(source_type: str, batch_size: int | None = None) -> int:
         return _upsert_embeddings(session, source_type, rows, vectors)
 
 
-@celery_app.task(name="app.tasks.embeddings.embed_quran")
+@celery_app.task(name="app.tasks.embeddings.embed_quran")  # type: ignore[untyped-decorator]
 def embed_quran(batch_size: int | None = None) -> int:
     return _embed_source("quran", batch_size)
 
 
-@celery_app.task(name="app.tasks.embeddings.embed_hadith")
+@celery_app.task(name="app.tasks.embeddings.embed_hadith")  # type: ignore[untyped-decorator]
 def embed_hadith(batch_size: int | None = None) -> int:
     return _embed_source("hadith", batch_size)
 
 
-@celery_app.task(name="app.tasks.embeddings.embed_all")
+@celery_app.task(name="app.tasks.embeddings.embed_all")  # type: ignore[untyped-decorator]
 def embed_all(batch_size: int | None = None) -> dict[str, int]:
     return {
         "quran": embed_quran.run(batch_size),
