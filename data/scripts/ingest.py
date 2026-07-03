@@ -379,7 +379,6 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
     hadiths = data.get("hadiths", [])
     batch = []
     for h in hadiths:
-        # Extract English text
         english = h.get("english", {})
         if isinstance(english, dict):
             text_en = (english.get("narrator", "") + " " + english.get("text", "")).strip()
@@ -388,12 +387,15 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
         else:
             text_en = ""
 
+        chapter_id_raw = h.get("chapterId")
+        chapter_id = int(chapter_id_raw) if chapter_id_raw is not None else 0
+
         batch.append({
             "collection_id": meta["collection_id"],
             "chapter_id": h.get("chapterId"),
             "hadith_number": str(h.get("idInBook", h.get("id", ""))),
-            "chapter_name_eng": chapters[h.get("chapterId", 0)].get("english", "") if h.get("chapterId", 0) < len(chapters) else "",
-            "chapter_name_ar": chapters[h.get("chapterId", 0)].get("arabic", "") if h.get("chapterId", 0) < len(chapters) else "",
+            "chapter_name_eng": chapters[chapter_id].get("english", "") if chapter_id < len(chapters) else "",
+            "chapter_name_ar": chapters[chapter_id].get("arabic", "") if chapter_id < len(chapters) else "",
             "text_arabic": h.get("arabic", ""),
             "text_english": text_en,
             "grade": h.get("grade"),

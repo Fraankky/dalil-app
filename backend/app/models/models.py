@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, SmallInteger, String, Text, ForeignKey, UniqueConstraint, DateTime, func
+from sqlalchemy import Column, Index, Integer, SmallInteger, String, Text, ForeignKey, UniqueConstraint, DateTime, func
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
@@ -11,7 +11,7 @@ class Surah(Base):
     id = Column(SmallInteger, primary_key=True)
     name_arabic = Column(Text, nullable=False)
     name_english = Column(Text, nullable=False)
-    revelation_type = Column(String(6), nullable=False)
+    revelation_type = Column(String(7), nullable=False)
     verses_count = Column(SmallInteger, nullable=False)
 
     verses = relationship("Verse", back_populates="surah")
@@ -84,6 +84,9 @@ class Hadith(Base):
 
 class Embedding(Base):
     __tablename__ = "embeddings"
+    __table_args__ = (
+        UniqueConstraint("source_type", "source_id", "model_version"),
+    )
 
     id = Column(Integer, primary_key=True)
     source_type = Column(String(10), nullable=False)
