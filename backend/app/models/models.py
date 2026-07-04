@@ -93,7 +93,7 @@ class Hadith(Base):
     chapter_name_eng = Column(Text, nullable=True)
     chapter_name_ar = Column(Text, nullable=True)
     text_arabic = Column(Text, nullable=False)
-    text_english = Column(Text, nullable=True)
+    text_translation = Column(Text, nullable=True)
     grade = Column(String(30), nullable=True)
     narrator_chain = Column(Text, nullable=True)
 

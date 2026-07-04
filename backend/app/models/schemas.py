@@ -59,7 +59,7 @@ class HadithResponse(BaseModel):
     chapter_name_eng: str | None = None
     chapter_name_ar: str | None = None
     text_arabic: str
-    text_english: str | None = None
+    text_translation: str | None = None
     grade: str | None = None
 
 
