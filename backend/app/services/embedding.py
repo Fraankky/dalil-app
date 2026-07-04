@@ -1,6 +1,9 @@
 """Embedding service using multilingual-e5 model."""
 
+import asyncio
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -39,3 +42,17 @@ def embed_documents(texts: list[str], batch_size: int | None = None) -> np.ndarr
 
 def text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+_executor = ThreadPoolExecutor(max_workers=1)
+
+
+async def embed_query_async(text: str) -> np.ndarray:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_executor, embed_query, text)
+
+
+async def embed_documents_async(texts: list[str], batch_size: int | None = None) -> np.ndarray:
+    loop = asyncio.get_event_loop()
+    fn = partial(embed_documents, texts, batch_size=batch_size)
+    return await loop.run_in_executor(_executor, fn)

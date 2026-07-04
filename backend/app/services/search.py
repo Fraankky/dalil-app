@@ -4,7 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.schemas import SearchResponse, SearchResult
-from app.services.embedding import embed_query
+from app.services.embedding import embed_query_async
 
 _VECTOR_SCAN = """
     FROM embeddings e
@@ -166,7 +166,7 @@ async def semantic_search(
     offset: int = 0,
     min_score: float = 0.3,
 ) -> SearchResponse:
-    embedding = embed_query(query)
+    embedding = await embed_query_async(query)
     embedding_value = _vector_literal(embedding.tolist())
 
     candidate_limit = max(500, (offset + limit) * 20)
