@@ -6,7 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.schemas import SearchResponse, SearchResult
 from app.services.embedding import embed_query
 
-_VECTOR_JOIN = """
+_VECTOR_SCAN = """
+    FROM embeddings e
+    CROSS JOIN query_embedding qe
+    WHERE 1 - (e.embedding <=> qe.vec) >= :min_score
+"""
+
+_COUNT_JOIN = """
     FROM embeddings e
     CROSS JOIN query_embedding qe
     LEFT JOIN hadith h ON h.id = e.source_id
@@ -30,7 +36,7 @@ vector_results AS (
         e.source_type,
         e.source_id,
         1 - (e.embedding <=> qe.vec) AS score
-{_VECTOR_JOIN}
+{_VECTOR_SCAN}
     ORDER BY e.embedding <=> qe.vec
     LIMIT :candidate_limit
 ),
@@ -55,6 +61,7 @@ quran_results AS (
     JOIN verses v ON v.id = vr.source_id
     JOIN surahs s ON s.id = v.surah_id
     WHERE vr.source_type = 'quran'
+      AND :source_quran
 ),
 hadith_results AS (
     SELECT
@@ -79,6 +86,8 @@ hadith_results AS (
     LEFT JOIN hadith_books hb
         ON hb.collection_id = h.collection_id AND hb.book_number = h.chapter_id
     WHERE vr.source_type = 'hadith'
+      AND :source_hadith
+      AND (:all_hadith_collections OR hc.slug = ANY(CAST(:hadith_collections AS TEXT[])))
 ),
 combined AS (
     SELECT * FROM hadith_results
@@ -97,7 +106,7 @@ WITH query_embedding AS (
     SELECT CAST(:embedding AS vector) AS vec
 )
 SELECT COUNT(*) AS total
-{_VECTOR_JOIN}
+{_COUNT_JOIN}
 """
 
 HADITH_SOURCES = {
@@ -160,7 +169,7 @@ async def semantic_search(
     embedding = embed_query(query)
     embedding_value = _vector_literal(embedding.tolist())
 
-    candidate_limit = (offset + limit) * 5  # Oversample for accurate pagination
+    candidate_limit = max(500, (offset + limit) * 20)
     params = _search_params(
         embedding_value=embedding_value,
         sources=sources,
