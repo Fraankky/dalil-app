@@ -2,11 +2,12 @@
 
 import time
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.schemas import SearchResponse
 from app.services.search import semantic_search
 
@@ -14,7 +15,9 @@ router = APIRouter(prefix="/search", tags=["search"])
 
 
 @router.get("", response_model=SearchResponse)
+@limiter.limit("10/minute")
 async def search(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query"),
     sources: str | None = Query(None, description="Comma-separated sources: quran,bukhari,muslim"),
     limit: int = Query(settings.search_default_limit, le=settings.search_max_limit),
