@@ -2,7 +2,7 @@
 
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -28,17 +28,13 @@ async def search(
     if sources:
         source_list = [s.strip().lower() for s in sources.split(",") if s.strip()]
 
-    try:
-        response = await semantic_search(
-            db=db,
-            query=q,
-            sources=source_list,
-            limit=limit,
-            offset=offset,
-            min_score=min_score,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
+    response = await semantic_search(
+        db=db,
+        query=q,
+        sources=source_list,
+        limit=limit,
+        offset=offset,
+        min_score=min_score,
+    )
     response.took_ms = round((time.monotonic() - t0) * 1000)
     return response

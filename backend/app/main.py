@@ -2,11 +2,15 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from datetime import UTC, datetime
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import hadith, meta, quran, search
 from app.core.config import settings
+from app.models.schemas import ErrorResponse
 
 
 @asynccontextmanager
@@ -25,6 +29,19 @@ app = FastAPI(
     docs_url="/docs",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            error="Internal server error",
+            detail=str(exc) if settings.debug else None,
+            timestamp=datetime.now(UTC),
+        ).model_dump(mode="json"),
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
