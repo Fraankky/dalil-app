@@ -1,8 +1,20 @@
-import { BookOpenIcon, SearchIcon, StarIcon } from "@/components/icons";
+import { BookOpenIcon, FilterIcon, SearchIcon, StarIcon } from "@/components/icons";
 import { type SearchResponse, type SearchResult, fetchSearch } from "@/lib/api";
-import { createRoute, useNavigate } from "@tanstack/react-router";
+import { createRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { rootRoute } from "./__root";
+
+const HADITH_SOURCES = [
+  { slug: "abudawud", label: "Abu Dawud" },
+  { slug: "ahmad", label: "Ahmad" },
+  { slug: "bukhari", label: "Bukhari" },
+  { slug: "darimi", label: "Darimi" },
+  { slug: "ibnmajah", label: "Ibnu Majah" },
+  { slug: "malik", label: "Malik" },
+  { slug: "muslim", label: "Muslim" },
+  { slug: "nasai", label: "Nasai" },
+  { slug: "tirmidhi", label: "Tirmidzi" },
+];
 
 function getQueryParam(): string {
   const params = new URLSearchParams(window.location.search);
@@ -12,42 +24,58 @@ function getQueryParam(): string {
 function SearchPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState(getQueryParam);
-
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState(q || "");
+  const [page, setPage] = useState(1);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const doSearch = useCallback(async (query: string) => {
-    if (!query) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchSearch({ q: query, limit: 20 });
-      setData(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const doSearch = useCallback(
+    async (query: string, p: number, sources: string[]) => {
+      if (!query) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const params: Record<string, string | number | undefined> = {
+          q: query,
+          limit: 20,
+          offset: (p - 1) * 20,
+          sources: sources.length > 0 ? sources.join(",") : undefined,
+        };
+        const res = await fetchSearch(params as any);
+        setData(res);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Search failed");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (q) {
       setInputValue(q);
-      doSearch(q);
+      doSearch(q, page, selectedSources);
     }
-  }, [q, doSearch]);
+  }, [q, page, selectedSources, doSearch]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
+      setPage(1);
       setQ(inputValue.trim());
-      navigate({
-        to: "/search",
-        search: { q: inputValue.trim() },
-      });
+      navigate({ to: "/search", search: { q: inputValue.trim() } });
     }
+  };
+
+  const toggleSource = (slug: string) => {
+    setSelectedSources((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+    setPage(1);
   };
 
   if (!q) {
@@ -61,7 +89,54 @@ function SearchPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <SearchBar value={inputValue} onChange={setInputValue} onSubmit={handleSubmit} />
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1">
+          <SearchBar value={inputValue} onChange={setInputValue} onSubmit={handleSubmit} />
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className={`p-3 border-2 rounded-xl transition-all ${
+            showFilters ? "border-emerald-500 bg-emerald-50" : "border-neutral-200"
+          }`}
+        >
+          <FilterIcon />
+        </button>
+      </div>
+
+      {showFilters && (
+        <div className="mb-6 p-4 border border-neutral-200 rounded-xl bg-neutral-50">
+          <p className="text-sm font-medium text-neutral-700 mb-2">Filter by source:</p>
+          <div className="flex flex-wrap gap-2">
+            {HADITH_SOURCES.map((s) => (
+              <button
+                key={s.slug}
+                type="button"
+                onClick={() => toggleSource(s.slug)}
+                className={`px-3 py-1 text-xs rounded-full border transition-all ${
+                  selectedSources.includes(s.slug)
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white text-neutral-600 border-neutral-300 hover:border-emerald-400"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+            {selectedSources.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSources([]);
+                  setPage(1);
+                }}
+                className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-500 hover:bg-red-50"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading && <LoadingSkeleton />}
       {error && <div className="text-red-500 mt-4">{error}</div>}
@@ -84,6 +159,46 @@ function SearchPage() {
           {data.results.length === 0 && (
             <div className="text-center py-16 text-neutral-400">
               No results found. Try different keywords or a more general query.
+            </div>
+          )}
+
+          {data.pages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+                className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+              >
+                Previous
+              </button>
+              {Array.from({ length: Math.min(data.pages, 10) }, (_, i) => {
+                const start = Math.max(1, page - 4);
+                const p = start + i;
+                if (p > data.pages) return null;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 text-sm rounded-lg transition-all ${
+                      p === page
+                        ? "bg-emerald-600 text-white"
+                        : "border border-neutral-200 hover:border-emerald-300"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={page >= data.pages}
+                onClick={() => setPage(page + 1)}
+                className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+              >
+                Next
+              </button>
             </div>
           )}
         </>
@@ -126,7 +241,14 @@ function SearchBar({
 }
 
 function ResultCard({ result }: { result: SearchResult }) {
-  return (
+  const linkTo =
+    result.type === "quran" && result.surah_number
+      ? `/quran/${result.surah_number}`
+      : result.type === "hadith" && result.collection_slug
+        ? `/hadith/${result.collection_slug}`
+        : null;
+
+  const card = (
     <div className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
@@ -176,13 +298,17 @@ function ResultCard({ result }: { result: SearchResult }) {
       )}
     </div>
   );
+
+  if (linkTo) {
+    return <Link to={linkTo}>{card}</Link>;
+  }
+  return card;
 }
 
 function LoadingSkeleton() {
   return (
     <div className="space-y-4 mt-6 animate-pulse">
       {Array.from({ length: 5 }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, never reorders
         <div key={i} className="border border-neutral-200 rounded-xl p-5">
           <div className="h-4 bg-neutral-100 rounded w-1/3 mb-3" />
           <div className="h-16 bg-neutral-50 rounded mb-3" />
