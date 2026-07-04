@@ -124,7 +124,7 @@ class Embedding(Base):
     id = Column(Integer, primary_key=True)
     source_type = Column(String(10), nullable=False)
     source_id = Column(Integer, nullable=False)
-    embedding = Column(Vector(1024), nullable=False)
+    embedding = Column(Vector(384), nullable=False)
     text_hash = Column(String(64), nullable=True)
     model_version = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

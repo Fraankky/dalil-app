@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # Embedding
-    embedding_model: str = "intfloat/multilingual-e5-large-instruct"
-    embedding_dim: int = 1024
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embedding_dim: int = 384
     embedding_batch_size: int = 32
 
     # Celery

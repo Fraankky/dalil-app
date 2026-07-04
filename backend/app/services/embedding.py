@@ -1,4 +1,4 @@
-"""Embedding service using multilingual-e5 model."""
+"""Embedding service using SentenceTransformer models."""
 
 import asyncio
 import hashlib
@@ -24,20 +24,21 @@ def get_model() -> SentenceTransformer:
     return _load_model()
 
 
+def _needs_prefix() -> bool:
+    return "e5" in settings.embedding_model.lower()
+
+
 def embed_query(text: str) -> np.ndarray:
-    """Generate embedding for a search query. E5 expects 'query: ' prefix."""
     model = get_model()
-    embedding = model.encode(f"query: {text}", normalize_embeddings=True)
-    return embedding
+    prefixed = f"query: {text}" if _needs_prefix() else text
+    return model.encode(prefixed, normalize_embeddings=True)
 
 
 def embed_documents(texts: list[str], batch_size: int | None = None) -> np.ndarray:
-    """Generate embeddings for documents. E5 expects 'passage: ' prefix."""
     model = get_model()
     bs = batch_size or settings.embedding_batch_size
-    prefixed = [f"passage: {t}" for t in texts]
-    embeddings = model.encode(prefixed, batch_size=bs, normalize_embeddings=True)
-    return embeddings
+    prefixed = [f"passage: {t}" if _needs_prefix() else t for t in texts]
+    return model.encode(prefixed, batch_size=bs, normalize_embeddings=True)
 
 
 def text_hash(text: str) -> str:
