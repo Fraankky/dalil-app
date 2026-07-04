@@ -5,14 +5,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import hadith, meta, quran, search
 from app.core.config import settings
-from app.api import search, quran, hadith, meta
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Pre-load embedding model on startup
     from app.services.embedding import get_model
+
     get_model()
     yield
 

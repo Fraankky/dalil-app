@@ -4,16 +4,18 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-06-16
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 
+from alembic import op
+
 revision: str = "0001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -51,17 +53,20 @@ def upgrade() -> None:
     op.create_table(
         "hadith_books",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False),
+        sa.Column(
+            "collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False
+        ),  # noqa: E501
         sa.Column("name_eng", sa.Text(), nullable=False),
         sa.Column("name_ar", sa.Text(), nullable=False),
-        sa.Column("book_number", sa.SmallInteger(), nullable=False),
-        sa.UniqueConstraint("collection_id", "book_number"),
+        sa.PrimaryKeyConstraint("id"),
     )
 
     op.create_table(
         "hadith",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False),
+        sa.Column(
+            "collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False
+        ),  # noqa: E501
         sa.Column("chapter_id", sa.Integer(), nullable=True),
         sa.Column("hadith_number", sa.Text(), nullable=False),
         sa.Column("chapter_name_eng", sa.Text(), nullable=True),

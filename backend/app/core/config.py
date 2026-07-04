@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # Embedding
     embedding_model: str = "intfloat/multilingual-e5-large-instruct"
-    embedding_dim: int = 1024
+    embedding_dim: int = 384
     embedding_batch_size: int = 32
 
     # Celery

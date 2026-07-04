@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models.models import Surah, Verse
@@ -14,9 +13,7 @@ router = APIRouter(prefix="/quran", tags=["quran"])
 
 @router.get("/surahs")
 async def list_surahs(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Surah).order_by(Surah.id)
-    )
+    result = await db.execute(select(Surah).order_by(Surah.id))
     surahs = result.scalars().all()
     return [
         {
@@ -37,9 +34,7 @@ async def get_surah(
     per_page: int = Query(50, le=286),
     db: AsyncSession = Depends(get_db),
 ):
-    surah_result = await db.execute(
-        select(Surah).where(Surah.id == surah_number)
-    )
+    surah_result = await db.execute(select(Surah).where(Surah.id == surah_number))
     surah = surah_result.scalar_one_or_none()
     if not surah:
         raise HTTPException(status_code=404, detail="Surah not found")
@@ -87,7 +82,8 @@ async def get_verse(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Verse).join(Surah)
+        select(Verse)
+        .join(Surah)
         .where(Verse.surah_id == surah_number, Verse.verse_number == verse_number)
     )
     verse = result.scalar_one_or_none()

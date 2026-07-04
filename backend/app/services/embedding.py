@@ -1,14 +1,13 @@
 """Embedding service using multilingual-e5 model."""
 
 import hashlib
-from typing import Optional
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 
-_model: Optional[SentenceTransformer] = None
+_model: SentenceTransformer | None = None
 
 
 def _load_model() -> SentenceTransformer:
