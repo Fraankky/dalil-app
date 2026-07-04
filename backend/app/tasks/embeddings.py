@@ -47,7 +47,7 @@ def _rows_missing_embeddings(
             SELECT
                 h.id AS source_id,
                 h.text_arabic,
-                h.text_english AS text_translation,
+                h.text_translation,
                 e.text_hash AS existing_text_hash
             FROM hadith h
             LEFT JOIN embeddings e

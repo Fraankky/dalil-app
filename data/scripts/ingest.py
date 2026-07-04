@@ -8,17 +8,11 @@ Usage:
 
 Requires PostgreSQL running (via docker compose or local).
 Set DATABASE_URL in .env or environment.
-
-Data sources:
-    data/raw/quran/quran.json       — risan/quran-json
-    data/raw/quran/chapters.json    — surah metadata (en)
-    data/raw/hadith/{book}.json     — AhmedBaset/hadith-json
 """
 
 import json
 import os
 import sys
-import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -31,7 +25,6 @@ DATA_RAW = ROOT / "data" / "raw"
 # ── Quran Data ────────────────────────────────────────────────────────
 
 QURAN_JSON = DATA_RAW / "quran" / "quran.json"
-CHAPTERS_JSON = DATA_RAW / "quran" / "chapters.json"
 
 QURAN_SURAH_NAMES = {
     1: ("الفاتحة", "Al-Fatihah", "Meccan"),
@@ -150,73 +143,41 @@ QURAN_SURAH_NAMES = {
     114: ("الناس", "An-Nas", "Meccan"),
 }
 
-# ── Hadith Book Metadata ──────────────────────────────────────────────
+# ── Hadith Book Metadata (Indonesian) ──────────────────────────────────
+
+HADITH_ID_FILES = {
+    "abudawud": DATA_RAW / "hadith-id" / "abu-dawud.json",
+    "ahmad": DATA_RAW / "hadith-id" / "ahmad.json",
+    "bukhari": DATA_RAW / "hadith-id" / "bukhari.json",
+    "darimi": DATA_RAW / "hadith-id" / "darimi.json",
+    "ibnmajah": DATA_RAW / "hadith-id" / "ibnu-majah.json",
+    "malik": DATA_RAW / "hadith-id" / "malik.json",
+    "muslim": DATA_RAW / "hadith-id" / "muslim.json",
+    "nasai": DATA_RAW / "hadith-id" / "nasai.json",
+    "tirmidhi": DATA_RAW / "hadith-id" / "tirmidzi.json",
+}
+
+HADITH_COLLECTIONS_ID = {
+    "abudawud": {"name_eng": "Abu Dawud", "slug": "abudawud"},
+    "ahmad": {"name_eng": "Ahmad", "slug": "ahmad"},
+    "bukhari": {"name_eng": "Bukhari", "slug": "bukhari"},
+    "darimi": {"name_eng": "Darimi", "slug": "darimi"},
+    "ibnmajah": {"name_eng": "Ibnu Majah", "slug": "ibnmajah"},
+    "malik": {"name_eng": "Malik", "slug": "malik"},
+    "muslim": {"name_eng": "Muslim", "slug": "muslim"},
+    "nasai": {"name_eng": "Nasai", "slug": "nasai"},
+    "tirmidhi": {"name_eng": "Tirmidzi", "slug": "tirmidhi"},
+}
 
 HADITH_BOOKS = {
-    "bukhari": {
-        "name_eng": "Sahih al-Bukhari",
-        "name_ar": "صحيح البخاري",
-        "slug": "bukhari",
-        "collection_id": 1,
-    },
-    "muslim": {
-        "name_eng": "Sahih Muslim",
-        "name_ar": "صحيح مسلم",
-        "slug": "muslim",
-        "collection_id": 2,
-    },
-    "abudawud": {
-        "name_eng": "Sunan Abu Dawud",
-        "name_ar": "سنن أبي داود",
-        "slug": "abudawud",
-        "collection_id": 3,
-    },
-    "tirmidhi": {
-        "name_eng": "Jami' at-Tirmidhi",
-        "name_ar": "جامع الترمذي",
-        "slug": "tirmidhi",
-        "collection_id": 4,
-    },
-    "nasai": {
-        "name_eng": "Sunan an-Nasa'i",
-        "name_ar": "سنن النسائي",
-        "slug": "nasai",
-        "collection_id": 5,
-    },
-    "ibnmajah": {
-        "name_eng": "Sunan Ibn Majah",
-        "name_ar": "سنن ابن ماجه",
-        "slug": "ibnmajah",
-        "collection_id": 6,
-    },
-    "malik": {
-        "name_eng": "Muwatta Malik",
-        "name_ar": "موطأ مالك",
-        "slug": "malik",
-        "collection_id": 7,
-    },
-    "nawawi40": {
-        "name_eng": "Forty Hadith of an-Nawawi",
-        "name_ar": "الأربعون النووية",
-        "slug": "nawawi40",
-        "collection_id": 8,
-    },
+    slug: {"name_eng": info["name_eng"], "name_ar": "", "slug": info["slug"], "collection_id": idx + 1}
+    for idx, (slug, info) in enumerate(HADITH_COLLECTIONS_ID.items())
 }
 
-HADITH_FILES = {
-    "bukhari": DATA_RAW / "hadith" / "bukhari.json",
-    "muslim": DATA_RAW / "hadith" / "muslim.json",
-    "abudawud": DATA_RAW / "hadith" / "abudawud.json",
-    "tirmidhi": DATA_RAW / "hadith" / "tirmidhi.json",
-    "nasai": DATA_RAW / "hadith" / "nasai.json",
-    "ibnmajah": DATA_RAW / "hadith" / "ibnmajah.json",
-    "malik": DATA_RAW / "hadith" / "malik.json",
-    "nawawi40": DATA_RAW / "hadith" / "nawawi40.json",
-}
+HADITH_FILES = HADITH_ID_FILES
 
 
 def get_db_url() -> str:
-    """Get database URL from environment or default."""
     url = os.environ.get(
         "DATABASE_URL_SYNC",
         "postgresql://postgres:postgres@localhost:5432/dalil",
@@ -231,176 +192,133 @@ def get_engine(db_url: Optional[str] = None):
 
 # ── Quran Ingestion ───────────────────────────────────────────────────
 
-def ingest_quran(session: Session) -> dict:
-    """Ingest Quran data from quran.json."""
-    print("\n=== INGEST QURAN ===")
-    assert QURAN_JSON.exists(), f"File not found: {QURAN_JSON}"
 
-    with open(QURAN_JSON) as f:
-        quran_data = json.load(f)
+def _load_quran_arabic(path: Path) -> dict[tuple[int, int], str]:
+    with open(path) as f:
+        data = json.load(f)
+    result = {}
+    for surah_str, verses in data.items():
+        surah = int(surah_str)
+        for v in verses:
+            result[(surah, v["verse"])] = v["text"]
+    return result
+
+
+def _load_quran_translation(path: Path) -> dict[tuple[int, int], str]:
+    with open(path) as f:
+        data = json.load(f)
+    result = {}
+    if isinstance(data, dict) and "quran" in data:
+        for v in data["quran"]:
+            result[(v["chapter"], v["verse"])] = v["text"]
+    elif isinstance(data, list):
+        for v in data:
+            result[(v["chapter"], v["verse"])] = v["text"]
+    return result
+
+
+def ingest_quran(session: Session) -> dict:
+    print("\n=== INGEST QURAN ===")
+    arabic = _load_quran_arabic(QURAN_JSON)
+    translation = _load_quran_translation(DATA_RAW / "quran" / "quran-id.json")
 
     stats = {"surahs": 0, "verses": 0}
 
-    # Insert surahs
-    for surah_num_str, verses_list in quran_data.items():
-        surah_num = int(surah_num_str)
+    for surah_num in sorted(set(k[0] for k in arabic)):
         if surah_num in QURAN_SURAH_NAMES:
             name_ar, name_en, rev_type = QURAN_SURAH_NAMES[surah_num]
         else:
             continue
-
+        surah_verses = sorted(k[1] for k in arabic if k[0] == surah_num)
         session.execute(
-            text(
-                """INSERT INTO surahs (id, name_arabic, name_english, revelation_type, verses_count)
-                   VALUES (:id, :name_ar, :name_en, :rev_type, :count)
-                   ON CONFLICT (id) DO UPDATE SET
-                       name_arabic = EXCLUDED.name_arabic,
-                       name_english = EXCLUDED.name_english,
-                       revelation_type = EXCLUDED.revelation_type,
-                       verses_count = EXCLUDED.verses_count"""
-            ),
-            {
-                "id": surah_num,
-                "name_ar": name_ar,
-                "name_en": name_en,
-                "rev_type": rev_type,
-                "count": len(verses_list),
-            },
+            text("""INSERT INTO surahs (id, name_arabic, name_english, revelation_type, verses_count)
+                     VALUES (:id, :name_ar, :name_en, :rev_type, :count)
+                     ON CONFLICT (id) DO UPDATE SET
+                         name_arabic = EXCLUDED.name_arabic,
+                         name_english = EXCLUDED.name_english,
+                         revelation_type = EXCLUDED.revelation_type,
+                         verses_count = EXCLUDED.verses_count"""),
+            {"id": surah_num, "name_ar": name_ar, "name_en": name_en, "rev_type": rev_type, "count": len(surah_verses)},
         )
         stats["surahs"] += 1
 
     session.commit()
     print(f"  Inserted {stats['surahs']} surahs")
 
-    # Insert verses in batches
     batch = []
-    total = 0
-    for surah_num_str, verses_list in quran_data.items():
-        surah_num = int(surah_num_str)
-        for v in verses_list:
-            batch.append({
-                "surah_id": surah_num,
-                "verse_number": v["verse"],
-                "text_arabic": v["text"],
-            })
-            total += 1
-            if len(batch) >= 500:
-                _insert_verses_batch(session, batch)
-                stats["verses"] += len(batch)
-                batch = []
+    for (surah, verse), arabic_text in sorted(arabic.items()):
+        trans = translation.get((surah, verse), "")
+        batch.append({"surah_id": surah, "verse_number": verse, "text_arabic": arabic_text, "text_translation": trans})
+        if len(batch) >= 500:
+            _insert_verses_batch(session, batch)
+            stats["verses"] += len(batch)
+            batch = []
 
     if batch:
         _insert_verses_batch(session, batch)
         stats["verses"] += len(batch)
 
     session.commit()
-    print(f"  Inserted {stats['verses']} verses (total: {total})")
+    print(f"  Inserted {stats['verses']} verses")
     return stats
 
 
 def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
-    """Bulk insert verses using raw SQL."""
-    values = ", ".join(
-        f"(:surah_id_{i}, :verse_number_{i}, :text_arabic_{i})"
-        for i in range(len(batch))
-    )
+    values = ", ".join(f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch)))
     params = {}
     for i, v in enumerate(batch):
-        params[f"surah_id_{i}"] = v["surah_id"]
-        params[f"verse_number_{i}"] = v["verse_number"]
-        params[f"text_arabic_{i}"] = v["text_arabic"]
-
+        params[f"sid_{i}"] = v["surah_id"]
+        params[f"vn_{i}"] = v["verse_number"]
+        params[f"ar_{i}"] = v["text_arabic"]
+        params[f"tr_{i}"] = v["text_translation"]
     session.execute(
-        text(
-            f"""INSERT INTO verses (surah_id, verse_number, text_arabic)
-                VALUES {values}
-                ON CONFLICT (surah_id, verse_number) DO UPDATE
-                SET text_arabic = EXCLUDED.text_arabic"""
-        ),
+        text(f"""INSERT INTO verses (surah_id, verse_number, text_arabic, text_translation)
+                 VALUES {values}
+                 ON CONFLICT (surah_id, verse_number) DO UPDATE SET
+                     text_arabic = EXCLUDED.text_arabic,
+                     text_translation = EXCLUDED.text_translation"""),
         params,
     )
 
 
 # ── Hadith Ingestion ──────────────────────────────────────────────────
 
+
 def ingest_hadith(session: Session, book_slug: str) -> dict:
-    """Ingest a single hadith book."""
     filepath = HADITH_FILES.get(book_slug)
     if not filepath or not filepath.exists():
-        print(f"  SKIP {book_slug}: file not found at {filepath}")
+        print(f"  SKIP {book_slug}: file not found")
         return {"collections": 0, "books": 0, "chapters": 0, "hadith": 0}
 
     meta = HADITH_BOOKS[book_slug]
     print(f"\n  === {meta['name_eng']} ({book_slug}) ===")
 
     with open(filepath) as f:
-        data = json.load(f)
+        hadiths = json.load(f)
 
     stats = {"collections": 0, "books": 0, "chapters": 0, "hadith": 0}
 
-    # Insert or update collection
     session.execute(
-        text(
-            """INSERT INTO hadith_collections (id, name_eng, name_ar, slug)
-               VALUES (:id, :name_eng, :name_ar, :slug)
-               ON CONFLICT (id) DO UPDATE SET
-                   name_eng = EXCLUDED.name_eng,
-                   name_ar = EXCLUDED.name_ar,
-                   slug = EXCLUDED.slug"""
-        ),
-        {
-            "id": meta["collection_id"],
-            "name_eng": meta["name_eng"],
-            "name_ar": meta["name_ar"],
-            "slug": meta["slug"],
-        },
+        text("""INSERT INTO hadith_collections (id, name_eng, name_ar, slug)
+                 VALUES (:id, :name_eng, :name_ar, :slug)
+                 ON CONFLICT (id) DO UPDATE SET
+                     name_eng = EXCLUDED.name_eng, name_ar = EXCLUDED.name_ar, slug = EXCLUDED.slug"""),
+        {"id": meta["collection_id"], "name_eng": meta["name_eng"], "name_ar": meta["name_ar"], "slug": meta["slug"]},
     )
     stats["collections"] = 1
 
-    # Insert chapters as "books" (hadith_books table)
-    chapters = data.get("chapters", [])
-    for ch in chapters:
-        session.execute(
-            text(
-                """INSERT INTO hadith_books (collection_id, name_eng, name_ar, book_number)
-                   VALUES (:coll_id, :name_eng, :name_ar, :book_number)
-                   ON CONFLICT DO NOTHING"""
-            ),
-            {
-                "coll_id": meta["collection_id"],
-                "name_eng": ch.get("english", ""),
-                "name_ar": ch.get("arabic", ""),
-                "book_number": ch.get("id", 0),
-            },
-        )
-        stats["books"] += 1
-
-    # Insert hadiths in batches
-    hadiths = data.get("hadiths", [])
     batch = []
     for h in hadiths:
-        english = h.get("english", {})
-        if isinstance(english, dict):
-            text_en = (english.get("narrator", "") + " " + english.get("text", "")).strip()
-        elif isinstance(english, str):
-            text_en = english
-        else:
-            text_en = ""
-
-        chapter_id_raw = h.get("chapterId")
-        chapter_id = int(chapter_id_raw) if chapter_id_raw is not None else 0
-
         batch.append({
             "collection_id": meta["collection_id"],
-            "chapter_id": h.get("chapterId"),
-            "hadith_number": str(h.get("idInBook", h.get("id", ""))),
-            "chapter_name_eng": chapters[chapter_id].get("english", "") if chapter_id < len(chapters) else "",
-            "chapter_name_ar": chapters[chapter_id].get("arabic", "") if chapter_id < len(chapters) else "",
-            "text_arabic": h.get("arabic", ""),
-            "text_english": text_en,
-            "grade": h.get("grade"),
+            "chapter_id": None,
+            "hadith_number": str(h.get("number", "")),
+            "chapter_name_eng": None,
+            "chapter_name_ar": None,
+            "text_arabic": h.get("arab", ""),
+            "text_translation": h.get("id", ""),
+            "grade": None,
         })
-
         if len(batch) >= 500:
             _insert_hadith_batch(session, batch)
             stats["hadith"] += len(batch)
@@ -411,50 +329,38 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
         stats["hadith"] += len(batch)
 
     session.commit()
-    print(f"    Collections: {stats['collections']}, Books: {stats['books']}, Hadith: {stats['hadith']}")
+    print(f"    Collections: {stats['collections']}, Hadith: {stats['hadith']}")
     return stats
 
 
 def _insert_hadith_batch(session: Session, batch: list[dict]) -> None:
-    """Bulk insert hadith entries."""
-    values = ", ".join(
-        f"(:cid_{i}, :chid_{i}, :num_{i}, :cheng_{i}, :char_{i}, :ar_{i}, :en_{i}, :grade_{i})"
-        for i in range(len(batch))
-    )
+    values = ", ".join(f"(:cid_{i}, :chid_{i}, :num_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch)))
     params = {}
     for i, h in enumerate(batch):
         params[f"cid_{i}"] = h["collection_id"]
         params[f"chid_{i}"] = h["chapter_id"]
         params[f"num_{i}"] = h["hadith_number"]
-        params[f"cheng_{i}"] = h["chapter_name_eng"]
-        params[f"char_{i}"] = h["chapter_name_ar"]
         params[f"ar_{i}"] = h["text_arabic"]
-        params[f"en_{i}"] = h["text_english"]
-        params[f"grade_{i}"] = h.get("grade")
+        params[f"tr_{i}"] = h["text_translation"]
 
     session.execute(
-        text(
-            f"""INSERT INTO hadith (collection_id, chapter_id, hadith_number,
-                    chapter_name_eng, chapter_name_ar, text_arabic,
-                    text_english, grade)
-                VALUES {values}
-                ON CONFLICT (collection_id, hadith_number) DO UPDATE SET
-                    chapter_id = EXCLUDED.chapter_id,
-                    text_arabic = EXCLUDED.text_arabic,
-                    text_english = EXCLUDED.text_english,
-                    grade = EXCLUDED.grade"""
-        ),
+        text(f"""INSERT INTO hadith (collection_id, chapter_id, hadith_number, text_arabic, text_translation)
+                 VALUES {values}
+                 ON CONFLICT (collection_id, hadith_number) DO UPDATE SET
+                     text_arabic = EXCLUDED.text_arabic,
+                     text_translation = EXCLUDED.text_translation"""),
         params,
     )
 
 
 # ── Main ──────────────────────────────────────────────────────────────
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python ingest.py [quran|hadith|all]")
         print("  quran   — Ingest Quran only")
-        print("  hadith  — Ingest Hadith only (all 8 books)")
+        print("  hadith  — Ingest Hadith only (all books)")
         print("  all     — Ingest everything")
         sys.exit(1)
 
@@ -477,7 +383,6 @@ def main():
     print("\n=== INGESTION COMPLETE ===")
     print(json.dumps(total, indent=2, default=str))
 
-    # Print summary
     if "quran" in total:
         q = total["quran"]
         print(f"Quran: {q['surahs']} surahs, {q['verses']} verses")

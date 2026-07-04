@@ -72,7 +72,7 @@ hadith_results AS (
         h.chapter_name_eng AS chapter_name,
         h.grade,
         h.text_arabic,
-        h.text_english AS text_translation
+        h.text_translation
     FROM vector_results vr
     JOIN hadith h ON h.id = vr.source_id
     JOIN hadith_collections hc ON hc.id = h.collection_id
@@ -101,14 +101,15 @@ SELECT COUNT(*) AS total
 """
 
 HADITH_SOURCES = {
-    "bukhari",
-    "muslim",
     "abudawud",
-    "tirmidhi",
-    "nasai",
+    "ahmad",
+    "bukhari",
+    "darimi",
     "ibnmajah",
     "malik",
-    "nawawi40",
+    "muslim",
+    "nasai",
+    "tirmidhi",
 }
 
 

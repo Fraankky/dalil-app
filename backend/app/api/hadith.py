@@ -81,7 +81,7 @@ async def get_hadith_list(
                 chapter_name_eng=h.chapter_name_eng,
                 chapter_name_ar=h.chapter_name_ar,
                 text_arabic=h.text_arabic,
-                text_english=h.text_english,
+                text_translation=h.text_translation,
                 grade=h.grade,
             )
             for h in hadith_list
@@ -118,6 +118,6 @@ async def get_hadith_detail(
         chapter_name_eng=hadith.chapter_name_eng,
         chapter_name_ar=hadith.chapter_name_ar,
         text_arabic=hadith.text_arabic,
-        text_english=hadith.text_english,
+        text_translation=hadith.text_translation,
         grade=hadith.grade,
     )
