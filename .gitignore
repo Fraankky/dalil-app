@@ -40,3 +40,7 @@ pgdata/
 
 # Data (downloaded separately)
 data/raw/
+
+# moon
+.moon/cache
+.moon/docker

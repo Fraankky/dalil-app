@@ -1,0 +1,11 @@
+language: "typescript"
+
+tasks:
+  dev:
+    command: "npm run dev"
+  build:
+    command: "npm run build"
+  typecheck:
+    command: "npm run typecheck"
+  lint:
+    command: "npx biome check src/"

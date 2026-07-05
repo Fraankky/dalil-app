@@ -1,0 +1,6 @@
+tasks:
+  dev:
+    command: "echo 'Starting frontend and backend...'"
+    deps:
+      - "frontend:dev"
+      - "backend:dev"

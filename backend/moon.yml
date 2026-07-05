@@ -1,0 +1,13 @@
+language: "python"
+
+tasks:
+  dev:
+    command: "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+  lint:
+    command: "ruff check ."
+  format:
+    command: "ruff format --check ."
+  typecheck:
+    command: "mypy . --ignore-missing-imports"
+
+# docker compose up -d db redis
