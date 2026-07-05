@@ -5,6 +5,7 @@ Revises: 0005
 """
 
 from collections.abc import Sequence
+
 from alembic import op
 
 revision: str = "0006"
@@ -15,7 +16,10 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_embeddings_hnsw")
-    op.execute("ALTER TABLE embeddings ALTER COLUMN embedding TYPE vector(1024) USING embedding::vector(1024)")
+    op.execute(
+        "ALTER TABLE embeddings ALTER COLUMN embedding TYPE vector(1024) "
+        "USING embedding::vector(1024)"
+    )
     op.execute(
         "CREATE INDEX idx_embeddings_hnsw ON embeddings "
         "USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 200)"
@@ -24,7 +28,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_embeddings_hnsw")
-    op.execute("ALTER TABLE embeddings ALTER COLUMN embedding TYPE vector(384) USING embedding::vector(384)")
+    op.execute(
+        "ALTER TABLE embeddings ALTER COLUMN embedding TYPE vector(384) "
+        "USING embedding::vector(384)"
+    )
     op.execute(
         "CREATE INDEX idx_embeddings_hnsw ON embeddings "
         "USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 200)"

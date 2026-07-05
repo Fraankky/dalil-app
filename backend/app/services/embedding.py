@@ -31,14 +31,14 @@ def _needs_prefix() -> bool:
 def embed_query(text: str) -> np.ndarray:
     model = get_model()
     prefixed = f"query: {text}" if _needs_prefix() else text
-    return model.encode(prefixed, normalize_embeddings=True)
+    return np.asarray(model.encode(prefixed, normalize_embeddings=True))
 
 
 def embed_documents(texts: list[str], batch_size: int | None = None) -> np.ndarray:
     model = get_model()
     bs = batch_size or settings.embedding_batch_size
     prefixed = [f"passage: {t}" if _needs_prefix() else t for t in texts]
-    return model.encode(prefixed, batch_size=bs, normalize_embeddings=True)
+    return np.asarray(model.encode(prefixed, batch_size=bs, normalize_embeddings=True))
 
 
 def text_hash(text: str) -> str:

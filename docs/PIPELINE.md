@@ -35,26 +35,18 @@ Input Text ──► Tokenizer ──► Transformer Model ──► Pooling ─
                                                                  [0.034, -0.12, 0.67, ..., 0.01]
 ```
 
-Model yang digunakan: **`intfloat/multilingual-e5-large-instruct`**
+Model yang digunakan: **`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`**
 
 | Properti | Nilai | Penjelasan |
 |---|---|---|
-| Dimensi | 1024 | Vektor 1024 angka float32 |
-| Bahasa | 100+ | Arabic, English, Indonesia, Urdu, dll |
+| Dimensi | 384 | Vektor 384 angka float32 |
+| Bahasa | 50+ | Arabic, English, Indonesia, dll |
 | Max token | 512 | ~300 kata per input |
-| Strategi | Instruction-tuned | Prefix khusus untuk query vs dokumen |
-
-**Prefix convention E5 (sangat penting):**
-```
-query →   "query: {teks user}"       # Saat user mencari
-passage → "passage: {teks dokumen}"   # Saat embed ayat/hadith
-```
-
-> **Mengapa ini penting?** Model E5 dilatih secara *asymmetric* — query dan dokumen diperlakukan berbeda. Tanpa prefix yang tepat, akurasi turun drastis (~20-30% penurunan MRR).
+| Strategi | Standard | Tidak memerlukan prefix khusus |
 
 ### 1.3 Kenapa Bisa Cross-language?
 
-Model multilingual-e5 dilatih pada milyaran pasangan teks paralel (Arabic-English, Indonesia-English, dll) melalui **contrastive learning**. Hasilnya:
+Model multilingual-MiniLM dilatih pada korpus paralel multibahasa. Hasilnya:
 
 - `"patience"` (EN) dan `"الصبر"` (AR) menghasilkan vector yang **hampir identik**
 - `"shalat"` (transliterasi) akan dekat dengan `"الصلاة"` (Arabic) dan `"prayer"` (EN)

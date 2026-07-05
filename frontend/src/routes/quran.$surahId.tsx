@@ -1,6 +1,6 @@
+import { fetchSurahDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { createRoute, useParams } from "@tanstack/react-router";
-import { fetchSurahDetail } from "@/lib/api";
 import { quranRoute } from "./quran";
 
 function SurahDetailPage() {
@@ -19,12 +19,13 @@ function SurahDetailPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <a href="/quran" className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block">
+        <a
+          href="/quran"
+          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
+        >
           &larr; Back to surahs
         </a>
-        <h1 className="text-2xl font-bold text-neutral-900">
-          {data.surah.name_english}
-        </h1>
+        <h1 className="text-2xl font-bold text-neutral-900">{data.surah.name_english}</h1>
         <p className="text-lg text-neutral-500 mt-1">{data.surah.name_arabic}</p>
       </div>
 
@@ -36,7 +37,10 @@ function SurahDetailPage() {
                 {verse.verse_number}
               </span>
             </div>
-            <p className="arabic-text text-xl leading-relaxed text-neutral-900 mb-3 text-right" dir="rtl">
+            <p
+              className="arabic-text text-xl leading-relaxed text-neutral-900 mb-3 text-right"
+              dir="rtl"
+            >
               {verse.text_arabic}
             </p>
             {verse.text_translation && (

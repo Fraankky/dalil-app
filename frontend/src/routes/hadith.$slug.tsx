@@ -1,6 +1,6 @@
+import { fetchCollectionHadith } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { createRoute, useParams } from "@tanstack/react-router";
-import { fetchCollectionHadith } from "@/lib/api";
 import { hadithRoute } from "./hadith";
 
 function HadithCollectionPage() {
@@ -19,7 +19,10 @@ function HadithCollectionPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <a href="/hadith" className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block">
+        <a
+          href="/hadith"
+          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
+        >
           &larr; Back to collections
         </a>
         <h1 className="text-2xl font-bold text-neutral-900">{data.collection.name_eng}</h1>
@@ -34,14 +37,13 @@ function HadithCollectionPage() {
               <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                 #{h.hadith_number}
               </span>
-              {h.grade && (
-                <span className="text-xs text-neutral-400">{h.grade}</span>
-              )}
-              {h.book_name && (
-                <span className="text-xs text-neutral-400">{h.book_name}</span>
-              )}
+              {h.grade && <span className="text-xs text-neutral-400">{h.grade}</span>}
+              {h.book_name && <span className="text-xs text-neutral-400">{h.book_name}</span>}
             </div>
-            <p className="arabic-text text-lg leading-relaxed text-neutral-900 mb-3 text-right" dir="rtl">
+            <p
+              className="arabic-text text-lg leading-relaxed text-neutral-900 mb-3 text-right"
+              dir="rtl"
+            >
               {h.text_arabic}
             </p>
             {h.text_translation && (

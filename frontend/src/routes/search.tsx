@@ -1,6 +1,6 @@
 import { BookOpenIcon, FilterIcon, SearchIcon, StarIcon } from "@/components/icons";
 import { type SearchResponse, type SearchResult, fetchSearch } from "@/lib/api";
-import { createRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, createRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { rootRoute } from "./__root";
 
@@ -32,28 +32,25 @@ function SearchPage() {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  const doSearch = useCallback(
-    async (query: string, p: number, sources: string[]) => {
-      if (!query) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const params: Record<string, string | number | undefined> = {
-          q: query,
-          limit: 20,
-          offset: (p - 1) * 20,
-          sources: sources.length > 0 ? sources.join(",") : undefined,
-        };
-        const res = await fetchSearch(params as any);
-        setData(res);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Search failed");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+  const doSearch = useCallback(async (query: string, p: number, sources: string[]) => {
+    if (!query) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {
+        q: query,
+        limit: 20,
+        offset: (p - 1) * 20,
+        sources: sources.length > 0 ? sources.join(",") : undefined,
+      };
+      const res = await fetchSearch(params);
+      setData(res);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (q) {
@@ -306,10 +303,12 @@ function ResultCard({ result }: { result: SearchResult }) {
 }
 
 function LoadingSkeleton() {
+  const skeletonKeys = ["first", "second", "third", "fourth", "fifth"];
+
   return (
     <div className="space-y-4 mt-6 animate-pulse">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="border border-neutral-200 rounded-xl p-5">
+      {skeletonKeys.map((key) => (
+        <div key={key} className="border border-neutral-200 rounded-xl p-5">
           <div className="h-4 bg-neutral-100 rounded w-1/3 mb-3" />
           <div className="h-16 bg-neutral-50 rounded mb-3" />
           <div className="h-4 bg-neutral-100 rounded w-2/3" />

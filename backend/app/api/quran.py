@@ -1,5 +1,7 @@
 """Qur'an browse API."""
 
+from typing import Any, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +37,7 @@ async def get_surah(
     db: AsyncSession = Depends(get_db),
 ):
     surah_result = await db.execute(select(Surah).where(Surah.id == surah_number))
-    surah = surah_result.scalar_one_or_none()
+    surah = cast(Any, surah_result.scalar_one_or_none())
     if not surah:
         raise HTTPException(status_code=404, detail="Surah not found")
 
@@ -47,7 +49,7 @@ async def get_surah(
         .offset(offset)
         .limit(per_page)
     )
-    verses = verses_result.scalars().all()
+    verses = cast(list[Any], verses_result.scalars().all())
 
     total = surah.verses_count
     return {
@@ -86,12 +88,12 @@ async def get_verse(
         .join(Surah)
         .where(Verse.surah_id == surah_number, Verse.verse_number == verse_number)
     )
-    verse = result.scalar_one_or_none()
+    verse = cast(Any, result.scalar_one_or_none())
     if not verse:
         raise HTTPException(status_code=404, detail="Verse not found")
 
     surah_result = await db.execute(select(Surah).where(Surah.id == surah_number))
-    surah = surah_result.scalar_one()
+    surah = cast(Any, surah_result.scalar_one())
 
     return VerseResponse(
         id=verse.id,

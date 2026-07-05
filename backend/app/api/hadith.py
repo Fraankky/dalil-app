@@ -1,5 +1,7 @@
 """Hadith browse API."""
 
+from typing import Any, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +40,7 @@ async def get_hadith_list(
     coll_result = await db.execute(
         select(HadithCollection).where(HadithCollection.slug == collection_slug)
     )
-    collection = coll_result.scalar_one_or_none()
+    collection = cast(Any, coll_result.scalar_one_or_none())
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
 
@@ -59,7 +61,7 @@ async def get_hadith_list(
     )
 
     result = await db.execute(query)
-    hadith_list = result.scalars().all()
+    hadith_list = cast(list[Any], result.scalars().all())
 
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -105,7 +107,7 @@ async def get_hadith_detail(
         .where(HadithCollection.slug == collection_slug, Hadith.id == hadith_id)
         .options(selectinload(Hadith.book), selectinload(Hadith.collection))
     )
-    hadith = result.scalar_one_or_none()
+    hadith = cast(Any, result.scalar_one_or_none())
     if not hadith:
         raise HTTPException(status_code=404, detail="Hadith not found")
 

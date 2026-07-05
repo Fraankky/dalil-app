@@ -21,6 +21,7 @@ def test_get_hadith_list_book_id_parameter_is_nullable_int() -> None:
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "get_hadith_list"
     )
     book_id = next(arg for arg in func.args.args + func.args.posonlyargs if arg.arg == "book_id")
+    assert book_id.annotation is not None
     annotation = ast.unparse(book_id.annotation)
 
     assert "None" in annotation

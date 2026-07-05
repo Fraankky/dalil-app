@@ -16,14 +16,16 @@ def test_search_endpoint_parses_sources_and_returns_results(monkeypatch) -> None
     captured = {}
 
     async def fake_semantic_search(db, query, sources, limit, offset, min_score):
-        captured.update({
-            "db": db,
-            "query": query,
-            "sources": sources,
-            "limit": limit,
-            "offset": offset,
-            "min_score": min_score,
-        })
+        captured.update(
+            {
+                "db": db,
+                "query": query,
+                "sources": sources,
+                "limit": limit,
+                "offset": offset,
+                "min_score": min_score,
+            }
+        )
         return SearchResponse(
             query=query,
             query_lang="en",

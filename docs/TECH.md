@@ -9,7 +9,7 @@
 | **Backend API** | Python FastAPI | Async, OpenAPI auto-docs, ML ecosystem |
 | **Database (Primary)** | PostgreSQL 16 + pgvector | Vector similarity search, relational data |
 | **Cache** | Redis | Rate limiting, session cache, hot query cache |
-| **Embedding Model** | `intfloat/multilingual-e5-large-instruct` | State-of-the-art multilingual (supports Arabic + English), 1024-dim vectors |
+| **Embedding Model** | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Lightweight multilingual (supports Arabic + English), 384-dim vectors |
 | **Search Engine** | pgvector `ivfflat` / `hnsw` indexing | Cosine similarity, hybrid with BM25 |
 | **Task Queue** | Celery + Redis | Async embedding generation, data imports |
 | **Object Storage** | MinIO (dev) / S3 (prod) | Model files, static assets |
@@ -122,15 +122,14 @@ User Query (any language)
 
 ## 4. Vector Embedding Strategy
 
-### Model Choice: `intfloat/multilingual-e5-large-instruct`
+### Model Choice: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
 
 | Property | Value |
 |---|---|
-| Embedding dim | 1024 |
+| Embedding dim | 384 |
 | Max tokens | 512 |
-| Languages | 100+ (Arabic, English, Indonesian strong) |
-| MTEB score | 64.5 (multilingual retrieval) |
-| Instruction-tuned | Yes — prefix queries with `"query: "` |
+| Languages | 50+ (Arabic, English, Indonesian strong) |
+| Speed | Fast inference on CPU |
 
 ### Embedding Storage
 
@@ -138,15 +137,17 @@ User Query (any language)
 -- pgvector migration
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE verse_embeddings (
+CREATE TABLE embeddings (
     id          SERIAL PRIMARY KEY,
-    verse_id    INT REFERENCES verses(id) ON DELETE CASCADE,
-    embedding   VECTOR(1024),
     source_type VARCHAR(10) CHECK (source_type IN ('quran', 'hadith')),
-    lang        VARCHAR(5) DEFAULT 'ar'
+    source_id   INT NOT NULL,
+    embedding   VECTOR(384),
+    text_hash   VARCHAR(64),
+    model_version VARCHAR(100),
+    created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX ON verse_embeddings
+CREATE INDEX ON embeddings
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 200);
 ```

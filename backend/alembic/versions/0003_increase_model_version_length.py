@@ -1,4 +1,4 @@
-"""Increase model_version column width to accommodate model names like intfloat/multilingual-e5-large-instruct
+"""Increase model_version column width for longer embedding model names.
 
 Revision ID: 0003
 Revises: be79b21cfad0

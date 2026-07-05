@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { createRoute, Link } from "@tanstack/react-router";
 import { fetchSurahs } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { Link, createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 function QuranPage() {

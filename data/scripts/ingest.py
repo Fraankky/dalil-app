@@ -170,7 +170,12 @@ HADITH_COLLECTIONS_ID = {
 }
 
 HADITH_BOOKS = {
-    slug: {"name_eng": info["name_eng"], "name_ar": "", "slug": info["slug"], "collection_id": idx + 1}
+    slug: {
+        "name_eng": info["name_eng"],
+        "name_ar": "",
+        "slug": info["slug"],
+        "collection_id": idx + 1,
+    }
     for idx, (slug, info) in enumerate(HADITH_COLLECTIONS_ID.items())
 }
 
@@ -238,7 +243,13 @@ def ingest_quran(session: Session) -> dict:
                          name_english = EXCLUDED.name_english,
                          revelation_type = EXCLUDED.revelation_type,
                          verses_count = EXCLUDED.verses_count"""),
-            {"id": surah_num, "name_ar": name_ar, "name_en": name_en, "rev_type": rev_type, "count": len(surah_verses)},
+            {
+                "id": surah_num,
+                "name_ar": name_ar,
+                "name_en": name_en,
+                "rev_type": rev_type,
+                "count": len(surah_verses),
+            },
         )
         stats["surahs"] += 1
 
@@ -248,7 +259,14 @@ def ingest_quran(session: Session) -> dict:
     batch = []
     for (surah, verse), arabic_text in sorted(arabic.items()):
         trans = translation.get((surah, verse), "")
-        batch.append({"surah_id": surah, "verse_number": verse, "text_arabic": arabic_text, "text_translation": trans})
+        batch.append(
+            {
+                "surah_id": surah,
+                "verse_number": verse,
+                "text_arabic": arabic_text,
+                "text_translation": trans,
+            }
+        )
         if len(batch) >= 500:
             _insert_verses_batch(session, batch)
             stats["verses"] += len(batch)
@@ -264,7 +282,9 @@ def ingest_quran(session: Session) -> dict:
 
 
 def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
-    values = ", ".join(f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch)))
+    values = ", ".join(
+        f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch))
+    )
     params = {}
     for i, v in enumerate(batch):
         params[f"sid_{i}"] = v["surah_id"]
@@ -303,7 +323,12 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
                  VALUES (:id, :name_eng, :name_ar, :slug)
                  ON CONFLICT (id) DO UPDATE SET
                      name_eng = EXCLUDED.name_eng, name_ar = EXCLUDED.name_ar, slug = EXCLUDED.slug"""),
-        {"id": meta["collection_id"], "name_eng": meta["name_eng"], "name_ar": meta["name_ar"], "slug": meta["slug"]},
+        {
+            "id": meta["collection_id"],
+            "name_eng": meta["name_eng"],
+            "name_ar": meta["name_ar"],
+            "slug": meta["slug"],
+        },
     )
     stats["collections"] = 1
 
@@ -323,12 +348,16 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
         _insert_hadith_batch(session, batch)
         stats["hadith"] += len(batch)
 
+    collection_id = meta["collection_id"]
+    assert isinstance(collection_id, int)
     if books:
-        _insert_hadith_books_batch(session, meta["collection_id"], list(books.values()))
+        _insert_hadith_books_batch(session, collection_id, list(books.values()))
         stats["books"] = len(books)
 
     session.commit()
-    print(f"    Collections: {stats['collections']}, Books: {stats['books']}, Hadith: {stats['hadith']}")
+    print(
+        f"    Collections: {stats['collections']}, Books: {stats['books']}, Hadith: {stats['hadith']}"
+    )
     return stats
 
 
@@ -339,7 +368,9 @@ def _extract_hadith_book(row: dict) -> dict | None:
 
     return {
         "book_number": int(book_number),
-        "name_eng": row.get("book_name") or row.get("book_name_eng") or f"Book {book_number}",
+        "name_eng": row.get("book_name")
+        or row.get("book_name_eng")
+        or f"Book {book_number}",
         "name_ar": row.get("book_name_ar") or row.get("book_ar") or "",
     }
 
@@ -358,8 +389,12 @@ def _prepare_hadith_row(meta: dict, row: dict) -> dict:
     }
 
 
-def _insert_hadith_books_batch(session: Session, collection_id: int, books: list[dict]) -> None:
-    values = ", ".join(f"(:cid_{i}, :bn_{i}, :eng_{i}, :ar_{i})" for i in range(len(books)))
+def _insert_hadith_books_batch(
+    session: Session, collection_id: int, books: list[dict]
+) -> None:
+    values = ", ".join(
+        f"(:cid_{i}, :bn_{i}, :eng_{i}, :ar_{i})" for i in range(len(books))
+    )
     params = {}
     for i, book in enumerate(books):
         params[f"cid_{i}"] = collection_id
@@ -378,7 +413,9 @@ def _insert_hadith_books_batch(session: Session, collection_id: int, books: list
 
 
 def _insert_hadith_batch(session: Session, batch: list[dict]) -> None:
-    values = ", ".join(f"(:cid_{i}, :chid_{i}, :num_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch)))
+    values = ", ".join(
+        f"(:cid_{i}, :chid_{i}, :num_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch))
+    )
     params = {}
     for i, h in enumerate(batch):
         params[f"cid_{i}"] = h["collection_id"]

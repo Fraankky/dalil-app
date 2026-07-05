@@ -3,14 +3,15 @@
 import logging
 import time
 from contextlib import asynccontextmanager
-
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.types import ExceptionHandler
 
 from app.api import hadith, meta, quran, search
 from app.core.config import settings
@@ -39,7 +40,7 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, cast(ExceptionHandler, _rate_limit_exceeded_handler))
 
 
 @app.exception_handler(Exception)
