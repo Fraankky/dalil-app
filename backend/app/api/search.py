@@ -15,7 +15,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 
 
 @router.get("", response_model=SearchResponse)
-@limiter.limit("10/minute")
+@limiter.limit("60/minute")
 async def search(
     request: Request,
     q: str = Query(..., min_length=1, description="Search query"),

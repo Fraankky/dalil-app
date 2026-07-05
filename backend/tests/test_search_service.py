@@ -1,6 +1,7 @@
 from app.services.search import (
     COUNT_QUERY,
     SEARCH_QUERY,
+    _candidate_limit,
     _search_params,
     _source_flags,
     _vector_literal,
@@ -65,6 +66,19 @@ def test_search_params_include_hadith_collection_filter() -> None:
     assert params["hadith_collections"] == ["bukhari"]
     assert "hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))" in SEARCH_QUERY
     assert "hc.slug = ANY(CAST(:hadith_collections AS TEXT[]))" in COUNT_QUERY
+
+
+def test_vector_scan_applies_source_type_filter_before_candidate_limit() -> None:
+    assert "AND (:source_quran OR e.source_type != 'quran')" in SEARCH_QUERY
+    assert "AND (:source_hadith OR e.source_type != 'hadith')" in SEARCH_QUERY
+
+
+def test_candidate_limit_oversamples_hadith_collection_filters() -> None:
+    assert _candidate_limit(sources=["muslim"], limit=10, offset=0) == 2000
+
+
+def test_candidate_limit_keeps_default_for_unfiltered_search() -> None:
+    assert _candidate_limit(sources=None, limit=10, offset=0) == 500
 
 
 def test_search_params_preserve_all_hadith_behavior() -> None:

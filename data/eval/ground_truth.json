@@ -1,0 +1,22 @@
+[
+  {
+    "query": "patience in Islam",
+    "relevant": ["quran:2:153", "quran:3:200", "quran:103:3"]
+  },
+  {
+    "query": "mercy and forgiveness",
+    "relevant": ["quran:39:53", "quran:42:43"]
+  },
+  {
+    "query": "intentions are judged by actions",
+    "relevant": ["hadith:bukhari:1"]
+  },
+  {
+    "query": "الوحي إلى النبي",
+    "relevant": ["hadith:bukhari:2"]
+  },
+  {
+    "query": "kindness to parents",
+    "relevant": ["quran:17:23", "quran:31:14", "quran:46:15"]
+  }
+]

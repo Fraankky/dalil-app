@@ -44,6 +44,16 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    from fastapi.exceptions import HTTPException as FastAPIHTTPException
+
+    if isinstance(exc, FastAPIHTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=ErrorResponse(
+                error=exc.detail,
+                timestamp=datetime.now(UTC),
+            ).model_dump(mode="json"),
+        )
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(

@@ -307,18 +307,13 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
     )
     stats["collections"] = 1
 
+    books = {}
     batch = []
     for h in hadiths:
-        batch.append({
-            "collection_id": meta["collection_id"],
-            "chapter_id": None,
-            "hadith_number": str(h.get("number", "")),
-            "chapter_name_eng": None,
-            "chapter_name_ar": None,
-            "text_arabic": h.get("arab", ""),
-            "text_translation": h.get("id", ""),
-            "grade": None,
-        })
+        book = _extract_hadith_book(h)
+        if book is not None:
+            books[book["book_number"]] = book
+        batch.append(_prepare_hadith_row(meta, h))
         if len(batch) >= 500:
             _insert_hadith_batch(session, batch)
             stats["hadith"] += len(batch)
@@ -328,9 +323,58 @@ def ingest_hadith(session: Session, book_slug: str) -> dict:
         _insert_hadith_batch(session, batch)
         stats["hadith"] += len(batch)
 
+    if books:
+        _insert_hadith_books_batch(session, meta["collection_id"], list(books.values()))
+        stats["books"] = len(books)
+
     session.commit()
-    print(f"    Collections: {stats['collections']}, Hadith: {stats['hadith']}")
+    print(f"    Collections: {stats['collections']}, Books: {stats['books']}, Hadith: {stats['hadith']}")
     return stats
+
+
+def _extract_hadith_book(row: dict) -> dict | None:
+    book_number = row.get("book_number") or row.get("book") or row.get("book_id")
+    if book_number is None:
+        return None
+
+    return {
+        "book_number": int(book_number),
+        "name_eng": row.get("book_name") or row.get("book_name_eng") or f"Book {book_number}",
+        "name_ar": row.get("book_name_ar") or row.get("book_ar") or "",
+    }
+
+
+def _prepare_hadith_row(meta: dict, row: dict) -> dict:
+    book = _extract_hadith_book(row)
+    return {
+        "collection_id": meta["collection_id"],
+        "chapter_id": book["book_number"] if book else None,
+        "hadith_number": str(row.get("number", "")),
+        "chapter_name_eng": None,
+        "chapter_name_ar": None,
+        "text_arabic": row.get("arab", ""),
+        "text_translation": row.get("id", ""),
+        "grade": None,
+    }
+
+
+def _insert_hadith_books_batch(session: Session, collection_id: int, books: list[dict]) -> None:
+    values = ", ".join(f"(:cid_{i}, :bn_{i}, :eng_{i}, :ar_{i})" for i in range(len(books)))
+    params = {}
+    for i, book in enumerate(books):
+        params[f"cid_{i}"] = collection_id
+        params[f"bn_{i}"] = book["book_number"]
+        params[f"eng_{i}"] = book["name_eng"]
+        params[f"ar_{i}"] = book["name_ar"]
+
+    session.execute(
+        text(f"""INSERT INTO hadith_books (collection_id, book_number, name_eng, name_ar)
+                 VALUES {values}
+                 ON CONFLICT (collection_id, book_number) DO UPDATE SET
+                     name_eng = EXCLUDED.name_eng,
+                     name_ar = EXCLUDED.name_ar"""),
+        params,
+    )
 
 
 def _insert_hadith_batch(session: Session, batch: list[dict]) -> None:

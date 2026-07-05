@@ -10,6 +10,8 @@ _VECTOR_SCAN = """
     FROM embeddings e
     CROSS JOIN query_embedding qe
     WHERE 1 - (e.embedding <=> qe.vec) >= :min_score
+      AND (:source_quran OR e.source_type != 'quran')
+      AND (:source_hadith OR e.source_type != 'hadith')
 """
 
 _COUNT_JOIN = """
@@ -158,6 +160,14 @@ def _search_params(
     }
 
 
+def _candidate_limit(sources: list[str] | None, limit: int, offset: int) -> int:
+    hadith_collections = [s for s in (sources or []) if s in HADITH_SOURCES]
+    candidate_limit = max(500, (offset + limit) * 20)
+    if hadith_collections:
+        candidate_limit *= 4
+    return candidate_limit
+
+
 async def semantic_search(
     db: AsyncSession,
     query: str,
@@ -169,7 +179,7 @@ async def semantic_search(
     embedding = await embed_query_async(query)
     embedding_value = _vector_literal(embedding.tolist())
 
-    candidate_limit = max(500, (offset + limit) * 20)
+    candidate_limit = _candidate_limit(sources=sources, limit=limit, offset=offset)
     params = _search_params(
         embedding_value=embedding_value,
         sources=sources,
