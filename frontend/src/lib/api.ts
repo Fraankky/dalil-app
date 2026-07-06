@@ -74,6 +74,18 @@ export interface SurahDetailResponse {
   total_pages: number;
 }
 
+export interface VerseDetailResponse {
+  id: number;
+  surah_name_arabic: string;
+  surah_name_english: string;
+  surah_number: number;
+  verse_number: number;
+  text_arabic: string;
+  text_translation: string | null;
+  juz: number | null;
+  revelation_type: string | null;
+}
+
 export interface HadithCollectionInfo {
   id: number;
   name_eng: string;
@@ -117,6 +129,21 @@ export async function fetchSurahDetail(
   const sp = new URLSearchParams({ page: String(page), per_page: String(perPage) });
   const res = await fetch(`${API_BASE}/quran/${surahNumber}?${sp.toString()}`);
   if (!res.ok) throw new Error(`Failed to fetch surah: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchVerseDetail(
+  surahNumber: number,
+  verseNumber: number,
+): Promise<VerseDetailResponse> {
+  const res = await fetch(`${API_BASE}/quran/${surahNumber}/${verseNumber}`);
+  if (!res.ok) throw new Error(`Failed to fetch verse: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchHadithDetail(slug: string, hadithId: number): Promise<HadithInfo> {
+  const res = await fetch(`${API_BASE}/hadith/${slug}/${hadithId}`);
+  if (!res.ok) throw new Error(`Failed to fetch hadith: ${res.statusText}`);
   return res.json();
 }
 
