@@ -1,7 +1,7 @@
 import { fetchCollectionHadith } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
-import { hadithRoute } from "./hadith";
+import { rootRoute } from "./__root";
 
 function getPageParam(): number {
   const params = new URLSearchParams(window.location.search);
@@ -107,7 +107,7 @@ function HadithCollectionPage() {
 }
 
 export const hadithCollectionRoute = createRoute({
-  getParentRoute: () => hadithRoute,
-  path: "/$slug",
+  getParentRoute: () => rootRoute,
+  path: "/hadith/$slug",
   component: HadithCollectionPage,
 });

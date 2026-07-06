@@ -1,7 +1,7 @@
 import { fetchSurahDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
-import { quranRoute } from "./quran";
+import { rootRoute } from "./__root";
 
 const PER_PAGE = 10;
 
@@ -106,7 +106,7 @@ function SurahDetailPage() {
 }
 
 export const surahDetailRoute = createRoute({
-  getParentRoute: () => quranRoute,
-  path: "/$surahId",
+  getParentRoute: () => rootRoute,
+  path: "/quran/$surahId",
   component: SurahDetailPage,
 });

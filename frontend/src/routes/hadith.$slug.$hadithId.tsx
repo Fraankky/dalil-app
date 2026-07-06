@@ -1,7 +1,7 @@
 import { fetchHadithDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
-import { hadithCollectionRoute } from "./hadith.$slug";
+import { rootRoute } from "./__root";
 
 function HadithDetailPage() {
   const { slug, hadithId } = useParams({ from: "/hadith/$slug/$hadithId" });
@@ -83,10 +83,7 @@ function HadithDetailPage() {
 }
 
 export const hadithDetailRoute = createRoute({
-  getParentRoute: () => hadithCollectionRoute,
-  path: "/$hadithId",
-  validateSearch: (params: Record<string, unknown>) => ({
-    page: params.page ? Number(params.page) : 1,
-  }),
+  getParentRoute: () => rootRoute,
+  path: "/hadith/$slug/$hadithId",
   component: HadithDetailPage,
 });

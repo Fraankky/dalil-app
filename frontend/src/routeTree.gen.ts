@@ -11,6 +11,10 @@ import { hadithDetailRoute } from "./routes/hadith.$slug.$hadithId";
 export const routeTree = rootRoute.addChildren([
   indexRoute,
   searchRoute,
-  quranRoute.addChildren([surahDetailRoute.addChildren([verseDetailRoute])]),
-  hadithRoute.addChildren([hadithCollectionRoute.addChildren([hadithDetailRoute])]),
+  quranRoute,
+  surahDetailRoute,
+  verseDetailRoute,
+  hadithRoute,
+  hadithCollectionRoute,
+  hadithDetailRoute,
 ]);
