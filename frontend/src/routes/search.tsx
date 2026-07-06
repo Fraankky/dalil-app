@@ -79,7 +79,9 @@ function SearchPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
         <SearchBar value={inputValue} onChange={setInputValue} onSubmit={handleSubmit} />
-        <div className="text-center pt-16 text-neutral-400">Enter a search query to begin.</div>
+        <div className="text-center pt-16 text-neutral-400">
+          Masukkan kata kunci untuk mulai mencari dalil.
+        </div>
       </div>
     );
   }
@@ -103,7 +105,7 @@ function SearchPage() {
 
       {showFilters && (
         <div className="mb-6 p-4 border border-neutral-200 rounded-xl bg-neutral-50">
-          <p className="text-sm font-medium text-neutral-700 mb-2">Filter by source:</p>
+          <p className="text-sm font-medium text-neutral-700 mb-2">Filter sumber:</p>
           <div className="flex flex-wrap gap-2">
             {HADITH_SOURCES.map((s) => (
               <button
@@ -128,7 +130,7 @@ function SearchPage() {
                 }}
                 className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-500 hover:bg-red-50"
               >
-                Clear all
+                Hapus semua
               </button>
             )}
           </div>
@@ -142,8 +144,7 @@ function SearchPage() {
         <>
           <div className="flex items-center justify-between text-sm text-neutral-500 mt-6 mb-4">
             <span>
-              {data.total.toLocaleString()} result{data.total !== 1 ? "s" : ""} &middot;{" "}
-              {data.took_ms}ms
+              {data.total.toLocaleString()} hasil &middot; {data.took_ms}ms
             </span>
           </div>
 
@@ -155,7 +156,7 @@ function SearchPage() {
 
           {data.results.length === 0 && (
             <div className="text-center py-16 text-neutral-400">
-              No results found. Try different keywords or a more general query.
+              Tidak ada hasil ditemukan. Coba kata kunci lain atau istilah yang lebih umum.
             </div>
           )}
 
@@ -167,7 +168,7 @@ function SearchPage() {
                 onClick={() => setPage(page - 1)}
                 className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
               >
-                Previous
+                Sebelumnya
               </button>
               {Array.from({ length: Math.min(data.pages, 10) }, (_, i) => {
                 const start = Math.max(1, page - 4);
@@ -194,7 +195,7 @@ function SearchPage() {
                 onClick={() => setPage(page + 1)}
                 className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
               >
-                Next
+                Berikutnya
               </button>
             </div>
           )}
@@ -224,26 +225,52 @@ function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full px-3 py-3 bg-transparent outline-none"
-          placeholder="Refine your search..."
+          placeholder="Perbaiki pencarian..."
         />
       </div>
       <button
         type="submit"
         className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
       >
-        Search
+        Cari
       </button>
     </form>
   );
 }
 
 function ResultCard({ result }: { result: SearchResult }) {
-  const linkTo =
-    result.type === "quran" && result.surah_number
-      ? `/quran/${result.surah_number}`
-      : result.type === "hadith" && result.collection_slug
-        ? `/hadith/${result.collection_slug}`
-        : null;
+  const linkProps:
+    | { to: "/quran/$surahId/$verseNumber"; params: { surahId: string; verseNumber: string } }
+    | { to: "/quran/$surahId"; params: { surahId: string } }
+    | { to: "/hadith/$slug/$hadithId"; params: { slug: string; hadithId: string } }
+    | { to: "/hadith/$slug"; params: { slug: string } }
+    | null = (() => {
+    if (result.type === "quran" && result.surah_number && result.verse_number) {
+      return {
+        to: "/quran/$surahId/$verseNumber",
+        params: { surahId: String(result.surah_number), verseNumber: String(result.verse_number) },
+      };
+    }
+    if (result.type === "quran" && result.surah_number) {
+      return {
+        to: "/quran/$surahId",
+        params: { surahId: String(result.surah_number) },
+      };
+    }
+    if (result.type === "hadith" && result.collection_slug && result.source_id) {
+      return {
+        to: "/hadith/$slug/$hadithId",
+        params: { slug: result.collection_slug, hadithId: String(result.source_id) },
+      };
+    }
+    if (result.type === "hadith" && result.collection_slug) {
+      return {
+        to: "/hadith/$slug",
+        params: { slug: result.collection_slug },
+      };
+    }
+    return null;
+  })();
 
   const card = (
     <div className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 hover:shadow-sm transition-all">
@@ -257,7 +284,7 @@ function ResultCard({ result }: { result: SearchResult }) {
             }`}
           >
             <BookOpenIcon className="w-3 h-3" />
-            {result.type === "quran" ? "Qur'an" : "Hadith"}
+            {result.type === "quran" ? "Al-Qur'an" : "Hadis"}
           </span>
           {result.type === "quran" && result.surah_name && (
             <span className="text-sm font-medium text-neutral-700">
@@ -291,13 +318,13 @@ function ResultCard({ result }: { result: SearchResult }) {
       )}
 
       {result.type === "hadith" && result.chapter_name && (
-        <p className="text-xs text-neutral-400 mt-2">Chapter: {result.chapter_name}</p>
+        <p className="text-xs text-neutral-400 mt-2">Bab: {result.chapter_name}</p>
       )}
     </div>
   );
 
-  if (linkTo) {
-    return <Link to={linkTo}>{card}</Link>;
+  if (linkProps) {
+    return <Link {...linkProps}>{card}</Link>;
   }
   return card;
 }
