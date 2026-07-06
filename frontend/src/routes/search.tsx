@@ -240,33 +240,45 @@ function SearchBar({
 
 function ResultCard({ result }: { result: SearchResult }) {
   const linkProps:
-    | { to: "/quran/$surahId/$verseNumber"; params: { surahId: string; verseNumber: string } }
-    | { to: "/quran/$surahId"; params: { surahId: string } }
-    | { to: "/hadith/$slug/$hadithId"; params: { slug: string; hadithId: string } }
-    | { to: "/hadith/$slug"; params: { slug: string } }
+    | {
+        to: "/quran/$surahId/$verseNumber";
+        params: { surahId: string; verseNumber: string };
+        search: { page: number };
+      }
+    | { to: "/quran/$surahId"; params: { surahId: string }; search: { page: number } }
+    | {
+        to: "/hadith/$slug/$hadithId";
+        params: { slug: string; hadithId: string };
+        search: { page: number };
+      }
+    | { to: "/hadith/$slug"; params: { slug: string }; search: { page: number } }
     | null = (() => {
     if (result.type === "quran" && result.surah_number && result.verse_number) {
       return {
         to: "/quran/$surahId/$verseNumber",
         params: { surahId: String(result.surah_number), verseNumber: String(result.verse_number) },
+        search: { page: 1 },
       };
     }
     if (result.type === "quran" && result.surah_number) {
       return {
         to: "/quran/$surahId",
         params: { surahId: String(result.surah_number) },
+        search: { page: 1 },
       };
     }
     if (result.type === "hadith" && result.collection_slug && result.source_id) {
       return {
         to: "/hadith/$slug/$hadithId",
         params: { slug: result.collection_slug, hadithId: String(result.source_id) },
+        search: { page: 1 },
       };
     }
     if (result.type === "hadith" && result.collection_slug) {
       return {
         to: "/hadith/$slug",
         params: { slug: result.collection_slug },
+        search: { page: 1 },
       };
     }
     return null;

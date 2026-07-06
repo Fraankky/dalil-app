@@ -1,14 +1,28 @@
-import { fetchVerseDetail } from "@/lib/api";
+import { fetchSurahs, fetchVerseDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
 import { surahDetailRoute } from "./quran.$surahId";
 
 function VerseDetailPage() {
   const { surahId, verseNumber } = useParams({ from: "/quran/$surahId/$verseNumber" });
+  const numSurah = Number(surahId);
+  const numVerse = Number(verseNumber);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["verse", surahId, verseNumber],
-    queryFn: () => fetchVerseDetail(Number(surahId), Number(verseNumber)),
+    queryFn: () => fetchVerseDetail(numSurah, numVerse),
   });
+
+  const { data: surahs } = useQuery({
+    queryKey: ["surahs"],
+    queryFn: fetchSurahs,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const surahMeta = surahs?.find((s) => s.id === numSurah);
+  const totalVerses = surahMeta?.verses_count ?? 0;
+  const hasPrev = numVerse > 1;
+  const hasNext = numVerse < totalVerses;
 
   if (isLoading) {
     return (
@@ -22,6 +36,7 @@ function VerseDetailPage() {
         <Link
           to="/quran/$surahId"
           params={{ surahId }}
+          search={{ page: 1 }}
           className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
         >
           &larr; Kembali ke surat
@@ -35,13 +50,34 @@ function VerseDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link
-        to="/quran/$surahId"
-        params={{ surahId }}
-        className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-      >
-        &larr; Kembali ke surat
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link
+          to="/quran/$surahId"
+          params={{ surahId }}
+          search={{ page: 1 }}
+          className="text-sm text-emerald-600 hover:text-emerald-700 inline-block"
+        >
+          &larr; Kembali ke surat
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/quran/$surahId/$verseNumber"
+            params={{ surahId, verseNumber: String(numVerse - 1) }}
+            search={{ page: 1 }}
+            className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasPrev ? "pointer-events-none opacity-30" : ""}`}
+          >
+            &larr; Sebelumnya
+          </Link>
+          <Link
+            to="/quran/$surahId/$verseNumber"
+            params={{ surahId, verseNumber: String(numVerse + 1) }}
+            search={{ page: 1 }}
+            className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasNext ? "pointer-events-none opacity-30" : ""}`}
+          >
+            Berikutnya &rarr;
+          </Link>
+        </div>
+      </div>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-neutral-900">

@@ -35,6 +35,7 @@ function QuranPage() {
               key={surah.id}
               to="/quran/$surahId"
               params={{ surahId: String(surah.id) }}
+              search={{ page: 1 }}
               className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
             >
               <div className="flex items-center gap-3">
