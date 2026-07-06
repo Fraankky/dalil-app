@@ -19,14 +19,12 @@ function HadithDetailPage() {
   if (isError) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/hadith/$slug"
-          params={{ slug }}
-          search={{ page: 1 }}
+        <a
+          href={`/hadith/${slug}`}
           className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
         >
           &larr; Kembali ke kitab
-        </Link>
+        </a>
         <p className="text-neutral-500">Gagal memuat detail hadis.</p>
       </div>
     );
@@ -36,14 +34,12 @@ function HadithDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link
-        to="/hadith/$slug"
-        params={{ slug }}
-        search={{ page: 1 }}
+      <a
+        href={`/hadith/${slug}`}
         className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
       >
         &larr; Kembali ke kitab
-      </Link>
+      </a>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-neutral-900">{data.collection_name}</h1>

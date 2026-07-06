@@ -1,14 +1,18 @@
 import { fetchSurahDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { Link, createRoute, useParams } from "@tanstack/react-router";
 import { quranRoute } from "./quran";
 
 const PER_PAGE = 10;
 
+function getPageParam(): number {
+  const params = new URLSearchParams(window.location.search);
+  return Math.max(1, Number(params.get("page")) || 1);
+}
+
 function SurahDetailPage() {
   const { surahId } = useParams({ from: "/quran/$surahId" });
-  const page = useSearch({ from: "/quran/$surahId" }).page;
-  const navigate = useNavigate();
+  const page = getPageParam();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["surah", surahId, page],
     queryFn: () => fetchSurahDetail(Number(surahId), page, PER_PAGE),
@@ -56,7 +60,6 @@ function SurahDetailPage() {
             key={verse.id}
             to="/quran/$surahId/$verseNumber"
             params={{ surahId: String(data.surah.id), verseNumber: String(verse.verse_number) }}
-            search={{ page: 1 }}
             className="block p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
           >
             <div className="flex items-center gap-2 mb-2">
@@ -81,29 +84,21 @@ function SurahDetailPage() {
 
       {data.total_pages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() =>
-              navigate({ to: "/quran/$surahId", params: { surahId }, search: { page: page - 1 } })
-            }
-            className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+          <a
+            href={`/quran/${surahId}?page=${page - 1}`}
+            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
           >
             Sebelumnya
-          </button>
+          </a>
           <span className="text-sm text-neutral-500">
             {data.page} / {data.total_pages}
           </span>
-          <button
-            type="button"
-            disabled={page >= data.total_pages}
-            onClick={() =>
-              navigate({ to: "/quran/$surahId", params: { surahId }, search: { page: page + 1 } })
-            }
-            className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+          <a
+            href={`/quran/${surahId}?page=${page + 1}`}
+            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page >= data.total_pages ? "pointer-events-none opacity-40" : ""}`}
           >
             Berikutnya
-          </button>
+          </a>
         </div>
       )}
     </div>
@@ -113,8 +108,5 @@ function SurahDetailPage() {
 export const surahDetailRoute = createRoute({
   getParentRoute: () => quranRoute,
   path: "/$surahId",
-  validateSearch: (params: Record<string, unknown>) => ({
-    page: params.page ? Number(params.page) : 1,
-  }),
   component: SurahDetailPage,
 });

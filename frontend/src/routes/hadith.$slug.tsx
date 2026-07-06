@@ -1,12 +1,16 @@
 import { fetchCollectionHadith } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { Link, createRoute, useParams } from "@tanstack/react-router";
 import { hadithRoute } from "./hadith";
+
+function getPageParam(): number {
+  const params = new URLSearchParams(window.location.search);
+  return Math.max(1, Number(params.get("page")) || 1);
+}
 
 function HadithCollectionPage() {
   const { slug } = useParams({ from: "/hadith/$slug" });
-  const page = useSearch({ from: "/hadith/$slug" }).page;
-  const navigate = useNavigate();
+  const page = getPageParam();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["hadith", slug, page],
     queryFn: () => fetchCollectionHadith(slug, page, 20),
@@ -25,12 +29,12 @@ function HadithCollectionPage() {
   if (data.hadiths.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/hadith"
+        <a
+          href="/hadith"
           className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
         >
           &larr; Kembali ke daftar kitab
-        </Link>
+        </a>
         <p className="text-neutral-400">Belum ada hadis pada halaman ini.</p>
       </div>
     );
@@ -39,12 +43,12 @@ function HadithCollectionPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <Link
-          to="/hadith"
+        <a
+          href="/hadith"
           className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
         >
           &larr; Kembali ke daftar kitab
-        </Link>
+        </a>
         <h1 className="text-2xl font-bold text-neutral-900">{data.collection.name_eng}</h1>
         <p className="text-lg text-neutral-500 mt-1">{data.collection.name_ar}</p>
         <p className="text-sm text-neutral-400 mt-1">{data.total} hadis</p>
@@ -52,11 +56,9 @@ function HadithCollectionPage() {
 
       <div className="space-y-4">
         {data.hadiths.map((h) => (
-          <Link
+          <a
             key={h.id}
-            to="/hadith/$slug/$hadithId"
-            params={{ slug, hadithId: String(h.id) }}
-            search={{ page: 1 }}
+            href={`/hadith/${slug}/${h.id}`}
             className="block p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
           >
             <div className="flex items-center gap-2 mb-2">
@@ -77,35 +79,27 @@ function HadithCollectionPage() {
                 {h.text_translation}
               </p>
             )}
-          </Link>
+          </a>
         ))}
       </div>
 
       {data.total_pages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() =>
-              navigate({ to: "/hadith/$slug", params: { slug }, search: { page: page - 1 } })
-            }
-            className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+          <a
+            href={`/hadith/${slug}?page=${page - 1}`}
+            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
           >
             Sebelumnya
-          </button>
+          </a>
           <span className="text-sm text-neutral-500">
             Halaman {data.page} dari {data.total_pages}
           </span>
-          <button
-            type="button"
-            disabled={page >= data.total_pages}
-            onClick={() =>
-              navigate({ to: "/hadith/$slug", params: { slug }, search: { page: page + 1 } })
-            }
-            className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
+          <a
+            href={`/hadith/${slug}?page=${page + 1}`}
+            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page >= data.total_pages ? "pointer-events-none opacity-40" : ""}`}
           >
             Berikutnya
-          </button>
+          </a>
         </div>
       )}
     </div>
@@ -115,8 +109,5 @@ function HadithCollectionPage() {
 export const hadithCollectionRoute = createRoute({
   getParentRoute: () => hadithRoute,
   path: "/$slug",
-  validateSearch: (params: Record<string, unknown>) => ({
-    page: params.page ? Number(params.page) : 1,
-  }),
   component: HadithCollectionPage,
 });

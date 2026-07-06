@@ -33,14 +33,12 @@ function VerseDetailPage() {
   if (isError) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/quran/$surahId"
-          params={{ surahId }}
-          search={{ page: 1 }}
+        <a
+          href={`/quran/${surahId}`}
           className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
         >
           &larr; Kembali ke surat
-        </Link>
+        </a>
         <p className="text-neutral-500">Gagal memuat detail ayat.</p>
       </div>
     );
@@ -51,31 +49,25 @@ function VerseDetailPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-4">
-        <Link
-          to="/quran/$surahId"
-          params={{ surahId }}
-          search={{ page: 1 }}
+        <a
+          href={`/quran/${surahId}`}
           className="text-sm text-emerald-600 hover:text-emerald-700 inline-block"
         >
           &larr; Kembali ke surat
-        </Link>
+        </a>
         <div className="flex items-center gap-2">
-          <Link
-            to="/quran/$surahId/$verseNumber"
-            params={{ surahId, verseNumber: String(numVerse - 1) }}
-            search={{ page: 1 }}
+          <a
+            href={`/quran/${surahId}/${numVerse - 1}`}
             className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasPrev ? "pointer-events-none opacity-30" : ""}`}
           >
             &larr; Sebelumnya
-          </Link>
-          <Link
-            to="/quran/$surahId/$verseNumber"
-            params={{ surahId, verseNumber: String(numVerse + 1) }}
-            search={{ page: 1 }}
+          </a>
+          <a
+            href={`/quran/${surahId}/${numVerse + 1}`}
             className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasNext ? "pointer-events-none opacity-30" : ""}`}
           >
             Berikutnya &rarr;
-          </Link>
+          </a>
         </div>
       </div>
 
