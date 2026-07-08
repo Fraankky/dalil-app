@@ -29,6 +29,8 @@ def _needs_prefix() -> bool:
 
 
 def embed_query(text: str) -> np.ndarray:
+    if not text.strip():
+        raise ValueError("Empty query")
     model = get_model()
     prefixed = f"query: {text}" if _needs_prefix() else text
     return np.asarray(model.encode(prefixed, normalize_embeddings=True))
@@ -49,11 +51,11 @@ _executor = ThreadPoolExecutor(max_workers=1)
 
 
 async def embed_query_async(text: str) -> np.ndarray:
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(_executor, embed_query, text)
 
 
 async def embed_documents_async(texts: list[str], batch_size: int | None = None) -> np.ndarray:
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     fn = partial(embed_documents, texts, batch_size=batch_size)
     return await loop.run_in_executor(_executor, fn)

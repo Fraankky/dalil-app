@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.services.embedding import embed_documents, text_hash
 from app.services.search import _vector_literal
 
+MAX_BATCH = 256  # ponytail: clamp caps maliciously-enqueued batch_size=10_000_000
+
 
 def build_document_text(arabic: str, translation: str | None) -> str:
     parts = [arabic.strip()]
@@ -119,7 +121,7 @@ def _get_engine():
 
 
 def _embed_source(source_type: str, batch_size: int | None = None) -> int:
-    size = batch_size or settings.embedding_batch_size
+    size = min(batch_size or settings.embedding_batch_size, MAX_BATCH)
     with Session(_get_engine()) as session:
         rows = _rows_missing_embeddings(session, source_type, size)
         if not rows:
