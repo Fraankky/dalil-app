@@ -82,12 +82,14 @@ don't have yet. Bootstrap port 80 only.
 - **Environment variables** (Pages → Settings → Environment variables):
   - `BACKEND_URL` = `https://${DOMAIN}` (the VPS backend domain, e.g.
     `https://api.yourdomain.tld`).
-- Deploy. Pages will auto-discover `frontend/functions/api/[[...path]].ts`
-  and compile it into the deployment. The function proxies any
-  `/api/*` request to `${BACKEND_URL}/api/*`, forwarding method, headers,
-  body and query string, and returning the upstream response verbatim.
-  `frontend/public/_redirects` provides SPA fallback (`/* /index.html 200`)
-  only — the `/api` proxy is NOT a redirect.
+- Deploy. Your frontend will be at a Pages URL like
+  `https://dalil.pages.dev` (or a custom domain you add in Pages). Call this
+  `${FRONTEND_DOMAIN}` below. Pages will auto-discover
+  `frontend/functions/api/[[...path]].ts` and compile it into the deployment.
+  The function proxies any `/api/*` request to `${BACKEND_URL}/api/*`,
+  forwarding method, headers, body and query string, and returning the
+  upstream response verbatim. `frontend/public/_redirects` provides SPA
+  fallback (`/* /index.html 200`) only — the `/api` proxy is NOT a redirect.
 - Verify the proxy end-to-end:
   ```sh
   curl https://${FRONTEND_DOMAIN}/api/v1/health
