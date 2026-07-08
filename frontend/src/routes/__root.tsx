@@ -13,7 +13,7 @@ function RootLayout() {
           <nav className="flex items-center gap-6 text-sm text-neutral-600">
             <Link
               to="/search"
-              search={{ q: "" }}
+              search={{ q: "", page: 1 }}
               className="hover:text-neutral-900 transition-colors"
             >
               Cari

@@ -13,7 +13,7 @@ function HomePage() {
       if (!query.trim()) return;
       navigate({
         to: "/search",
-        search: { q: query.trim() },
+        search: { q: query.trim(), page: 1 },
       });
     },
     [query, navigate],
@@ -23,7 +23,7 @@ function HomePage() {
     setQuery(q);
     navigate({
       to: "/search",
-      search: { q },
+      search: { q, page: 1 },
     });
   };
 

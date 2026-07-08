@@ -1,7 +1,8 @@
 import { BookOpenIcon, FilterIcon, SearchIcon, StarIcon } from "@/components/icons";
-import { type SearchResponse, type SearchResult, fetchSearch } from "@/lib/api";
-import { Link, createRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { type SearchResult, fetchSearch } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { Link, createRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
 import { rootRoute } from "./__root";
 
 const HADITH_SOURCES = [
@@ -16,55 +17,29 @@ const HADITH_SOURCES = [
   { slug: "tirmidhi", label: "Tirmidzi" },
 ];
 
-function getQueryParam(): string {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("q") || "";
-}
-
 function SearchPage() {
   const navigate = useNavigate();
-  const [q, setQ] = useState(getQueryParam);
-  const [data, setData] = useState<SearchResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { q, page } = useSearch({ from: "/search" });
   const [inputValue, setInputValue] = useState(q || "");
-  const [page, setPage] = useState(1);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  const doSearch = useCallback(async (query: string, p: number, sources: string[]) => {
-    if (!query) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const params = {
-        q: query,
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["search", q, page, selectedSources],
+    queryFn: () =>
+      fetchSearch({
+        q,
         limit: 20,
-        offset: (p - 1) * 20,
-        sources: sources.length > 0 ? sources.join(",") : undefined,
-      };
-      const res = await fetchSearch(params);
-      setData(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (q) {
-      setInputValue(q);
-      doSearch(q, page, selectedSources);
-    }
-  }, [q, page, selectedSources, doSearch]);
+        offset: (page - 1) * 20,
+        sources: selectedSources.length > 0 ? selectedSources.join(",") : undefined,
+      }),
+    enabled: !!q,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      setPage(1);
-      setQ(inputValue.trim());
-      navigate({ to: "/search", search: { q: inputValue.trim() } });
+      navigate({ to: "/search", search: { q: inputValue.trim(), page: 1 } });
     }
   };
 
@@ -72,7 +47,7 @@ function SearchPage() {
     setSelectedSources((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
-    setPage(1);
+    navigate({ to: "/search", search: { q, page: 1 } });
   };
 
   if (!q) {
@@ -126,7 +101,7 @@ function SearchPage() {
                 type="button"
                 onClick={() => {
                   setSelectedSources([]);
-                  setPage(1);
+                  navigate({ to: "/search", search: { q, page: 1 } });
                 }}
                 className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-500 hover:bg-red-50"
               >
@@ -137,8 +112,8 @@ function SearchPage() {
         </div>
       )}
 
-      {loading && <LoadingSkeleton />}
-      {error && <div className="text-red-500 mt-4">{error}</div>}
+      {isLoading && <LoadingSkeleton />}
+      {error && <div className="text-red-500 mt-4">{error.message}</div>}
 
       {data && (
         <>
@@ -165,7 +140,7 @@ function SearchPage() {
               <button
                 type="button"
                 disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
+                onClick={() => navigate({ to: "/search", search: { q, page: page - 1 } })}
                 className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
               >
                 Sebelumnya
@@ -178,7 +153,7 @@ function SearchPage() {
                   <button
                     key={p}
                     type="button"
-                    onClick={() => setPage(p)}
+                    onClick={() => navigate({ to: "/search", search: { q, page: p } })}
                     className={`w-9 h-9 text-sm rounded-lg transition-all ${
                       p === page
                         ? "bg-emerald-600 text-white"
@@ -192,7 +167,7 @@ function SearchPage() {
               <button
                 type="button"
                 disabled={page >= data.pages}
-                onClick={() => setPage(page + 1)}
+                onClick={() => navigate({ to: "/search", search: { q, page: page + 1 } })}
                 className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
               >
                 Berikutnya
@@ -225,6 +200,7 @@ function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full px-3 py-3 bg-transparent outline-none"
+          aria-label="Cari dalil"
           placeholder="Perbaiki pencarian..."
         />
       </div>
@@ -309,7 +285,9 @@ function ResultCard({ result }: { result: SearchResult }) {
         </div>
       </div>
 
-      <p className="arabic-text mb-3 text-neutral-800">{result.text_arabic}</p>
+      <p className="arabic-text mb-3 text-neutral-800" dir="rtl">
+        {result.text_arabic}
+      </p>
 
       {result.text_translation && (
         <p className="text-sm text-neutral-600 border-t border-neutral-100 pt-3 leading-relaxed">
@@ -348,8 +326,11 @@ function LoadingSkeleton() {
 export const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
-  validateSearch: (params: Record<string, unknown>): { q: string } => {
-    return { q: (params.q as string) || "" };
+  validateSearch: (params: Record<string, unknown>): { q: string; page: number } => {
+    return {
+      q: typeof params.q === "string" ? params.q : "",
+      page: Number(params.page) || 1,
+    };
   },
   component: SearchPage,
 });
