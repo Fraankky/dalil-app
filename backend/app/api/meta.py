@@ -56,7 +56,7 @@ async def readiness() -> JSONResponse:
         pass
 
     redis_ok = False
-    client = aioredis.from_url(settings.redis_url)
+    client = aioredis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
     try:
         redis_ok = await client.ping()
     except Exception:
