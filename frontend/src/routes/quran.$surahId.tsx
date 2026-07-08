@@ -87,7 +87,9 @@ function SurahDetailPage() {
         <Pagination
           currentPage={page}
           totalPages={data.total_pages}
-          buildHref={(p) => `/quran/${surahId}?page=${p}`}
+          to="/quran/$surahId"
+          params={{ surahId }}
+          search={(p) => ({ page: p })}
         />
       )}
     </div>

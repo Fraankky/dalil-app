@@ -88,7 +88,9 @@ function HadithCollectionPage() {
         <Pagination
           currentPage={page}
           totalPages={data.total_pages}
-          buildHref={(p) => `/hadith/${slug}?page=${p}`}
+          to="/hadith/$slug"
+          params={{ slug }}
+          search={(p) => ({ page: p })}
         />
       )}
     </div>

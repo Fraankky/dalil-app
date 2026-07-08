@@ -1,7 +1,11 @@
+import { Link } from "@tanstack/react-router";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  buildHref: (page: number) => string;
+  to: string;
+  search?: (page: number) => Record<string, unknown>;
+  params?: Record<string, unknown>;
 }
 
 function buildPageNumbers(current: number, total: number): (number | "...")[] {
@@ -44,42 +48,48 @@ const activeBtn =
   "px-3 py-1.5 text-sm border border-emerald-500 bg-emerald-50 text-emerald-700 rounded-lg font-medium";
 const disabledBtn = "px-3 py-1.5 text-sm border border-neutral-200 rounded-lg opacity-30";
 
-export function Pagination({ currentPage, totalPages, buildHref }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, to, search, params }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const pages = buildPageNumbers(currentPage, totalPages);
 
   return (
     <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap">
-      <a
-        href={buildHref(currentPage - 1)}
-        className={`${baseBtn} ${currentPage <= 1 ? disabledBtn : ""}`}
-        aria-disabled={currentPage <= 1}
-        onClick={(e) => currentPage <= 1 && e.preventDefault()}
-      >
-        &larr; Sebelumnya
-      </a>
+      {currentPage <= 1 ? (
+        <span aria-disabled="true" className={`${baseBtn} ${disabledBtn}`}>
+          &larr; Sebelumnya
+        </span>
+      ) : (
+        <Link to={to} params={params} search={search?.(currentPage - 1) ?? {}} className={baseBtn}>
+          &larr; Sebelumnya
+        </Link>
+      )}
 
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-neutral-400 select-none">
+          <span key={`gap-after-${pages[i - 1]}`} className="px-2 text-neutral-400 select-none">
             &hellip;
           </span>
-        ) : (
-          <a key={p} href={buildHref(p)} className={p === currentPage ? activeBtn : baseBtn}>
+        ) : p === currentPage ? (
+          <span key={p} aria-current="page" className={activeBtn}>
             {p}
-          </a>
+          </span>
+        ) : (
+          <Link key={p} to={to} params={params} search={search?.(p) ?? {}} className={baseBtn}>
+            {p}
+          </Link>
         ),
       )}
 
-      <a
-        href={buildHref(currentPage + 1)}
-        className={`${baseBtn} ${currentPage >= totalPages ? disabledBtn : ""}`}
-        aria-disabled={currentPage >= totalPages}
-        onClick={(e) => currentPage >= totalPages && e.preventDefault()}
-      >
-        Berikutnya &rarr;
-      </a>
+      {currentPage >= totalPages ? (
+        <span aria-disabled="true" className={`${baseBtn} ${disabledBtn}`}>
+          Berikutnya &rarr;
+        </span>
+      ) : (
+        <Link to={to} params={params} search={search?.(currentPage + 1) ?? {}} className={baseBtn}>
+          Berikutnya &rarr;
+        </Link>
+      )}
     </div>
   );
 }
