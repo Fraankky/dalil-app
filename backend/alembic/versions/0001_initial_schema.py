@@ -1,8 +1,6 @@
-"""Initial schema: surahs, verses, hadith_collections, hadith_books, hadith, embeddings
+"""Squashed baseline (0001-0007 + be79b21cfad0) — single migration for first prod deploy.
 
-Revision ID: 0001
-Revises:
-Create Date: 2026-06-16
+data/raw/ is the source of truth; re-ingest required.
 """
 
 from collections.abc import Sequence
@@ -19,6 +17,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # ponytail: squashed baseline for first prod deploy;
+    # data/raw/ is the source of truth, no migration guards needed pre-launch
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     op.create_table(
@@ -26,14 +26,16 @@ def upgrade() -> None:
         sa.Column("id", sa.SmallInteger(), primary_key=True),
         sa.Column("name_arabic", sa.Text(), nullable=False),
         sa.Column("name_english", sa.Text(), nullable=False),
-        sa.Column("revelation_type", sa.String(6), nullable=False),
+        sa.Column("revelation_type", sa.String(7), nullable=False),
         sa.Column("verses_count", sa.SmallInteger(), nullable=False),
     )
 
     op.create_table(
         "verses",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("surah_id", sa.SmallInteger(), sa.ForeignKey("surahs.id"), nullable=False),
+        sa.Column(
+            "surah_id", sa.SmallInteger(), sa.ForeignKey("surahs.id"), nullable=False
+        ),
         sa.Column("verse_number", sa.SmallInteger(), nullable=False),
         sa.Column("text_arabic", sa.Text(), nullable=False),
         sa.Column("text_translation", sa.Text(), nullable=True),
@@ -54,25 +56,32 @@ def upgrade() -> None:
         "hadith_books",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column(
-            "collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False
-        ),  # noqa: E501
+            "collection_id",
+            sa.Integer(),
+            sa.ForeignKey("hadith_collections.id"),
+            nullable=False,
+        ),
         sa.Column("name_eng", sa.Text(), nullable=False),
         sa.Column("name_ar", sa.Text(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
+        sa.Column("book_number", sa.SmallInteger(), nullable=False),
+        sa.UniqueConstraint("collection_id", "book_number"),
     )
 
     op.create_table(
         "hadith",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column(
-            "collection_id", sa.Integer(), sa.ForeignKey("hadith_collections.id"), nullable=False
-        ),  # noqa: E501
+            "collection_id",
+            sa.Integer(),
+            sa.ForeignKey("hadith_collections.id"),
+            nullable=False,
+        ),
         sa.Column("chapter_id", sa.Integer(), nullable=True),
         sa.Column("hadith_number", sa.Text(), nullable=False),
         sa.Column("chapter_name_eng", sa.Text(), nullable=True),
         sa.Column("chapter_name_ar", sa.Text(), nullable=True),
         sa.Column("text_arabic", sa.Text(), nullable=False),
-        sa.Column("text_english", sa.Text(), nullable=True),
+        sa.Column("text_translation", sa.Text(), nullable=True),
         sa.Column("grade", sa.String(30), nullable=True),
         sa.Column("narrator_chain", sa.Text(), nullable=True),
         sa.UniqueConstraint("collection_id", "hadith_number"),
@@ -83,10 +92,15 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("source_type", sa.String(10), nullable=False),
         sa.Column("source_id", sa.Integer(), nullable=False),
-        sa.Column("embedding", Vector(1024), nullable=False),
+        sa.Column("embedding", Vector(384), nullable=False),
         sa.Column("text_hash", sa.String(64), nullable=True),
-        sa.Column("model_version", sa.String(30), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("model_version", sa.String(100), nullable=True),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now()
+        ),
+        sa.UniqueConstraint(
+            "source_type", "source_id", "model_version", name="uq_embeddings_source_model"
+        ),
     )
 
     op.create_index("idx_embeddings_source", "embeddings", ["source_type", "source_id"])
@@ -98,9 +112,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("embeddings")
-    op.drop_table("hadith")
-    op.drop_table("hadith_books")
-    op.drop_table("hadith_collections")
-    op.drop_table("verses")
-    op.drop_table("surahs")
+    op.execute("DROP TABLE IF EXISTS embeddings CASCADE")
+    op.execute("DROP TABLE IF EXISTS hadith CASCADE")
+    op.execute("DROP TABLE IF EXISTS hadith_books CASCADE")
+    op.execute("DROP TABLE IF EXISTS hadith_collections CASCADE")
+    op.execute("DROP TABLE IF EXISTS verses CASCADE")
+    op.execute("DROP TABLE IF EXISTS surahs CASCADE")
+    op.execute("DROP INDEX IF EXISTS idx_embeddings_hnsw")
+    op.execute("DROP EXTENSION IF EXISTS vector")
