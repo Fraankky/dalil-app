@@ -2,6 +2,7 @@
 
 import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import cast
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.types import ExceptionHandler
 
 from app.api import hadith, meta, quran, search
@@ -24,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Pre-load embedding model on startup
+    if settings.is_prod and "*" in settings.cors_origin_list:
+        raise RuntimeError("CORS wildcard not allowed with allow_credentials=True in production")
     from app.services.embedding import get_model
 
     get_model()
@@ -35,11 +38,14 @@ app = FastAPI(
     title="Dalil API",
     description="Semantic search across Qur'an and Hadith",
     version="0.1.0",
-    docs_url="/docs",
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
     lifespan=lifespan,
 )
 
 app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, cast(ExceptionHandler, _rate_limit_exceeded_handler))
 
 
@@ -55,11 +61,13 @@ async def global_exception_handler(request: Request, exc: Exception):
                 timestamp=datetime.now(UTC),
             ).model_dump(mode="json"),
         )
+    request_id = uuid.uuid4().hex[:8]
+    logger.exception("Unhandled error on %s ref=%s", request.url.path, request_id)
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             error="Internal server error",
-            detail=str(exc) if settings.debug else None,
+            detail=f"ref: {request_id}",
             timestamp=datetime.now(UTC),
         ).model_dump(mode="json"),
     )
@@ -67,10 +75,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET"],
+    allow_headers=["Content-Type", "Accept"],
 )
 
 
@@ -81,6 +89,17 @@ async def log_requests(request: Request, call_next):
     duration = (time.monotonic() - t0) * 1000
     logger.info("%s %s %d %.0fms", request.method, request.url.path, response.status_code, duration)
     return response
+
+
+@app.get("/healthz")
+async def healthz() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/readyz")
+async def readyz() -> dict[str, str]:
+    # ponytail: A8 will move the DB+Redis checks into meta.readiness()
+    return {"status": "ready"}
 
 
 app.include_router(meta.router, prefix=settings.api_prefix)
