@@ -97,9 +97,8 @@ async def healthz() -> dict[str, str]:
 
 
 @app.get("/readyz")
-async def readyz() -> dict[str, str]:
-    # ponytail: A8 will move the DB+Redis checks into meta.readiness()
-    return {"status": "ready"}
+async def readyz() -> JSONResponse:
+    return await meta.readiness()
 
 
 app.include_router(meta.router, prefix=settings.api_prefix)
