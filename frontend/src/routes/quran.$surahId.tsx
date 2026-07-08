@@ -1,3 +1,4 @@
+import { Pagination } from "@/components/Pagination";
 import { fetchSurahDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
@@ -83,23 +84,11 @@ function SurahDetailPage() {
       </div>
 
       {data.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
-          <a
-            href={`/quran/${surahId}?page=${page - 1}`}
-            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
-          >
-            Sebelumnya
-          </a>
-          <span className="text-sm text-neutral-500">
-            {data.page} / {data.total_pages}
-          </span>
-          <a
-            href={`/quran/${surahId}?page=${page + 1}`}
-            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page >= data.total_pages ? "pointer-events-none opacity-40" : ""}`}
-          >
-            Berikutnya
-          </a>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={data.total_pages}
+          buildHref={(p) => `/quran/${surahId}?page=${p}`}
+        />
       )}
     </div>
   );

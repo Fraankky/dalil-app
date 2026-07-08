@@ -1,3 +1,4 @@
+import { Pagination } from "@/components/Pagination";
 import { fetchCollectionHadith } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
@@ -84,23 +85,11 @@ function HadithCollectionPage() {
       </div>
 
       {data.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
-          <a
-            href={`/hadith/${slug}?page=${page - 1}`}
-            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
-          >
-            Sebelumnya
-          </a>
-          <span className="text-sm text-neutral-500">
-            Halaman {data.page} dari {data.total_pages}
-          </span>
-          <a
-            href={`/hadith/${slug}?page=${page + 1}`}
-            className={`px-4 py-2 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${page >= data.total_pages ? "pointer-events-none opacity-40" : ""}`}
-          >
-            Berikutnya
-          </a>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={data.total_pages}
+          buildHref={(p) => `/hadith/${slug}?page=${p}`}
+        />
       )}
     </div>
   );
