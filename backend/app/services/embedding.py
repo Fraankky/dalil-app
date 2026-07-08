@@ -1,14 +1,19 @@
 """Embedding service using SentenceTransformer models."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import TYPE_CHECKING
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 _model: SentenceTransformer | None = None
 
@@ -16,6 +21,8 @@ _model: SentenceTransformer | None = None
 def _load_model() -> SentenceTransformer:
     global _model
     if _model is None:
+        from sentence_transformers import SentenceTransformer
+
         _model = SentenceTransformer(settings.embedding_model)
     return _model
 
