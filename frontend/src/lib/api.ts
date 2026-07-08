@@ -1,5 +1,31 @@
 import { API_BASE } from "./constants";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  const signals: AbortSignal[] = [AbortSignal.timeout(10_000)];
+  if (init?.signal) signals.push(init.signal);
+  return fetch(url, { ...init, signal: AbortSignal.any(signals) });
+}
+
+async function readJson<T>(res: Response): Promise<T> {
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    throw new ApiError("Respon tidak valid dari server.", res.status);
+  }
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new ApiError("Respon tidak valid dari server.", res.status);
+  }
+}
+
 export interface SearchParams {
   q: string;
   sources?: string;
@@ -44,9 +70,9 @@ export async function fetchSearch(params: SearchParams): Promise<SearchResponse>
   if (params.offset) sp.set("offset", String(params.offset));
   if (params.min_score) sp.set("min_score", String(params.min_score));
 
-  const res = await fetch(`${API_BASE}/search?${sp.toString()}`);
-  if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/search?${sp.toString()}`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<SearchResponse>(res);
 }
 
 export interface SurahInfo {
@@ -116,9 +142,9 @@ export interface HadithListResponse {
 }
 
 export async function fetchSurahs(): Promise<SurahInfo[]> {
-  const res = await fetch(`${API_BASE}/quran/surahs`);
-  if (!res.ok) throw new Error(`Failed to fetch surahs: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/quran/surahs`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<SurahInfo[]>(res);
 }
 
 export async function fetchSurahDetail(
@@ -127,30 +153,30 @@ export async function fetchSurahDetail(
   perPage = 50,
 ): Promise<SurahDetailResponse> {
   const sp = new URLSearchParams({ page: String(page), per_page: String(perPage) });
-  const res = await fetch(`${API_BASE}/quran/${surahNumber}?${sp.toString()}`);
-  if (!res.ok) throw new Error(`Failed to fetch surah: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/quran/${surahNumber}?${sp.toString()}`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<SurahDetailResponse>(res);
 }
 
 export async function fetchVerseDetail(
   surahNumber: number,
   verseNumber: number,
 ): Promise<VerseDetailResponse> {
-  const res = await fetch(`${API_BASE}/quran/${surahNumber}/${verseNumber}`);
-  if (!res.ok) throw new Error(`Failed to fetch verse: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/quran/${surahNumber}/${verseNumber}`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<VerseDetailResponse>(res);
 }
 
 export async function fetchHadithDetail(slug: string, hadithId: number): Promise<HadithInfo> {
-  const res = await fetch(`${API_BASE}/hadith/${slug}/${hadithId}`);
-  if (!res.ok) throw new Error(`Failed to fetch hadith: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/hadith/${slug}/${hadithId}`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<HadithInfo>(res);
 }
 
 export async function fetchCollections(): Promise<HadithCollectionInfo[]> {
-  const res = await fetch(`${API_BASE}/hadith/collections`);
-  if (!res.ok) throw new Error(`Failed to fetch collections: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/hadith/collections`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<HadithCollectionInfo[]>(res);
 }
 
 export async function fetchCollectionHadith(
@@ -159,7 +185,7 @@ export async function fetchCollectionHadith(
   perPage = 20,
 ): Promise<HadithListResponse> {
   const sp = new URLSearchParams({ page: String(page), per_page: String(perPage) });
-  const res = await fetch(`${API_BASE}/hadith/${slug}?${sp.toString()}`);
-  if (!res.ok) throw new Error(`Failed to fetch hadith: ${res.statusText}`);
-  return res.json();
+  const res = await apiFetch(`${API_BASE}/hadith/${slug}?${sp.toString()}`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<HadithListResponse>(res);
 }
