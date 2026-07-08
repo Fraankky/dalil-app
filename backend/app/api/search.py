@@ -18,10 +18,10 @@ router = APIRouter(prefix="/search", tags=["search"])
 @limiter.limit("60/minute")
 async def search(
     request: Request,
-    q: str = Query(..., min_length=1, description="Search query"),
+    q: str = Query(..., min_length=1, max_length=1024, description="Search query"),
     sources: str | None = Query(None, description="Comma-separated sources: quran,bukhari,muslim"),
     limit: int = Query(settings.search_default_limit, le=settings.search_max_limit),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=1000),
     min_score: float = Query(settings.search_min_score, ge=0, le=1.0),
     db: AsyncSession = Depends(get_db),
 ):
