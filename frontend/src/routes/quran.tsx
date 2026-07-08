@@ -34,6 +34,7 @@ function QuranPage() {
             <Link
               key={surah.id}
               to="/quran/$surahId"
+              search={{ page: 1 }}
               params={{ surahId: String(surah.id) }}
               className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
             >

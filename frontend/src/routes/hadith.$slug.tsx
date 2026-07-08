@@ -1,17 +1,12 @@
 import { Pagination } from "@/components/Pagination";
 import { fetchCollectionHadith } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useParams } from "@tanstack/react-router";
+import { Link, createRoute, useParams, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
-
-function getPageParam(): number {
-  const params = new URLSearchParams(window.location.search);
-  return Math.max(1, Number(params.get("page")) || 1);
-}
 
 function HadithCollectionPage() {
   const { slug } = useParams({ from: "/hadith/$slug" });
-  const page = getPageParam();
+  const { page } = useSearch({ from: "/hadith/$slug" });
   const { data, isLoading, isError } = useQuery({
     queryKey: ["hadith", slug, page],
     queryFn: () => fetchCollectionHadith(slug, page, 20),
@@ -101,4 +96,7 @@ export const hadithCollectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/hadith/$slug",
   component: HadithCollectionPage,
+  validateSearch: (search: Record<string, string>) => ({
+    page: Number(search.page) || 1,
+  }),
 });

@@ -1,19 +1,14 @@
 import { Pagination } from "@/components/Pagination";
 import { fetchSurahDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useParams } from "@tanstack/react-router";
+import { Link, createRoute, useParams, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 const PER_PAGE = 10;
 
-function getPageParam(): number {
-  const params = new URLSearchParams(window.location.search);
-  return Math.max(1, Number(params.get("page")) || 1);
-}
-
 function SurahDetailPage() {
   const { surahId } = useParams({ from: "/quran/$surahId" });
-  const page = getPageParam();
+  const { page } = useSearch({ from: "/quran/$surahId" });
   const { data, isLoading, isError } = useQuery({
     queryKey: ["surah", surahId, page],
     queryFn: () => fetchSurahDetail(Number(surahId), page, PER_PAGE),
@@ -100,4 +95,7 @@ export const surahDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/quran/$surahId",
   component: SurahDetailPage,
+  validateSearch: (search: Record<string, string>) => ({
+    page: Number(search.page) || 1,
+  }),
 });
