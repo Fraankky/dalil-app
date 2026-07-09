@@ -122,4 +122,5 @@ async def get_hadith_detail(
         text_arabic=hadith.text_arabic,
         text_translation=hadith.text_translation,
         grade=hadith.grade,
+        text_syarah=hadith.text_syarah,
     )

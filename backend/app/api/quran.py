@@ -105,4 +105,5 @@ async def get_verse(
         text_translation=verse.text_translation,
         juz=verse.juz,
         revelation_type=surah.revelation_type,
+        tafsir=verse.text_tafsir,
     )
