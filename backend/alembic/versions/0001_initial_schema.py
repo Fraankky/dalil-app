@@ -33,9 +33,7 @@ def upgrade() -> None:
     op.create_table(
         "verses",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column(
-            "surah_id", sa.SmallInteger(), sa.ForeignKey("surahs.id"), nullable=False
-        ),
+        sa.Column("surah_id", sa.SmallInteger(), sa.ForeignKey("surahs.id"), nullable=False),
         sa.Column("verse_number", sa.SmallInteger(), nullable=False),
         sa.Column("text_arabic", sa.Text(), nullable=False),
         sa.Column("text_translation", sa.Text(), nullable=True),
@@ -95,9 +93,7 @@ def upgrade() -> None:
         sa.Column("embedding", Vector(384), nullable=False),
         sa.Column("text_hash", sa.String(64), nullable=True),
         sa.Column("model_version", sa.String(100), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.UniqueConstraint(
             "source_type", "source_id", "model_version", name="uq_embeddings_source_model"
         ),

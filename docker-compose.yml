@@ -1,14 +1,13 @@
-version: '3.8'
-
 services:
   db:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: dalil
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -19,8 +18,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -31,9 +31,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - ./backend/.env
     depends_on:
@@ -44,11 +45,18 @@ services:
     volumes:
       - ./backend:/app
       - model-cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 2g
 
   celery-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     command: celery -A app.celery_app worker --loglevel=info --concurrency=2
     env_file:
       - ./backend/.env
@@ -60,6 +68,7 @@ services:
     volumes:
       - ./backend:/app
       - model-cache:/root/.cache/huggingface
+    mem_limit: 3g
 
   frontend:
     build:
@@ -67,12 +76,16 @@ services:
       dockerfile: Dockerfile.dev
     command: npm run dev
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
       - backend
+
+networks:
+  default:
+    name: dalil-dev
 
 volumes:
   pgdata:
