@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -48,6 +48,7 @@ class VerseResponse(BaseModel):
     text_translation: str | None = None
     juz: int | None = None
     revelation_type: str | None = None
+    tafsir: dict[str, Any] | None = None
 
 
 class HadithResponse(BaseModel):
@@ -61,6 +62,7 @@ class HadithResponse(BaseModel):
     text_arabic: str
     text_translation: str | None = None
     grade: str | None = None
+    text_syarah: str | None = None
 
 
 class StatsResponse(BaseModel):

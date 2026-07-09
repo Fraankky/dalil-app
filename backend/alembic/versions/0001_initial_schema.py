@@ -39,6 +39,7 @@ def upgrade() -> None:
         sa.Column("text_translation", sa.Text(), nullable=True),
         sa.Column("juz", sa.SmallInteger(), nullable=True),
         sa.Column("page", sa.SmallInteger(), nullable=True),
+        sa.Column("text_tafsir", sa.dialects.postgresql.JSONB(), nullable=True),
         sa.UniqueConstraint("surah_id", "verse_number"),
     )
 
@@ -82,6 +83,7 @@ def upgrade() -> None:
         sa.Column("text_translation", sa.Text(), nullable=True),
         sa.Column("grade", sa.String(30), nullable=True),
         sa.Column("narrator_chain", sa.Text(), nullable=True),
+        sa.Column("text_syarah", sa.Text(), nullable=True),
         sa.UniqueConstraint("collection_id", "hadith_number"),
     )
 

@@ -10,6 +10,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -38,6 +39,7 @@ class Verse(Base):
     text_translation = Column(Text, nullable=True)
     juz = Column(SmallInteger, nullable=True)
     page = Column(SmallInteger, nullable=True)
+    text_tafsir = Column(JSONB, nullable=True)
 
     surah = relationship("Surah", back_populates="verses")
     embeddings = relationship(
@@ -96,6 +98,7 @@ class Hadith(Base):
     text_translation = Column(Text, nullable=True)
     grade = Column(String(30), nullable=True)
     narrator_chain = Column(Text, nullable=True)
+    text_syarah = Column(Text, nullable=True)
 
     collection = relationship(
         "HadithCollection", back_populates="hadith", foreign_keys=[collection_id]
