@@ -490,7 +490,8 @@ Replace existing `_insert_verses_batch`:
 ```python
 def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
     values = ", ".join(
-        f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i}, :tf_{i})" for i in range(len(batch))
+        f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i}, CAST(:tf_{i} AS jsonb))"
+        for i in range(len(batch))
     )
     params = {}
     for i, v in enumerate(batch):
@@ -510,6 +511,8 @@ def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
         params,
     )
 ```
+
+`CAST(:tf_{i} AS jsonb)` wajib — PostgreSQL tidak auto-cast text→jsonb; `text_tafsir` dikirim sebagai stringified JSON (`json.dumps(taf)` dari Task 3 Step 4), CAST mengonversinya ke JSONB.
 
 - [ ] **Step 6: Tambah nawawi40 di `HADITH_ID_FILES` dan `HADITH_COLLECTIONS_ID`**
 
@@ -1019,14 +1022,14 @@ url = os.environ.get('DATABASE_URL_SYNC', 'postgresql://postgres:postgres@localh
 e = create_engine(url)
 with e.connect() as c:
     print('verses w/ tafsir:', c.execute(text('SELECT count(*) FROM verses WHERE text_tafsir IS NOT NULL')).scalar())
-    print('hadith w/ syarah:', c.execute(text('SELECT count(*) FROM hadith WHERE text_syarah IS NOT NULL')).scalar())
     print('nawawi40 total:', c.execute(text(\"SELECT count(*) FROM hadith h JOIN hadith_collections c ON h.collection_id=c.id WHERE c.slug='nawawi40'\")).scalar())
 "
 ```
 Expected:
 - verses w/ tafsir: 6236
-- hadith w/ syarah: 42 (kalau Task 6 sudah; kalau belum, 0)
 - nawawi40 total: 42
+
+(Task 6 syarah curation di-skip — `hadith.text_syarah` akan null untuk nawawi40 dulu, UI tunjukkan placeholder; curate nanti, re-ingest idempotent.)
 
 - [ ] **Step 4: Jalankan embeddings untuk Nawawi40**
 
