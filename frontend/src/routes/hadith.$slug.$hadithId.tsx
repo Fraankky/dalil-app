@@ -83,9 +83,7 @@ function HadithDetailPage() {
             {data.text_syarah}
           </p>
         ) : (
-          <p className="text-sm text-neutral-400">
-            Syarah belum tersedia untuk hadis ini.
-          </p>
+          <p className="text-sm text-neutral-400">Syarah belum tersedia untuk hadis ini.</p>
         )}
       </div>
     </div>
