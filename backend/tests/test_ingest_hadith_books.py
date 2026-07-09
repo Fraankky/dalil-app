@@ -1,4 +1,4 @@
-from data.scripts.ingest import _extract_hadith_book, _prepare_hadith_row
+from data.scripts.ingest import _extract_hadith_book, _load_quran_tafsir, _prepare_hadith_row
 
 
 def test_extract_hadith_book_reads_common_book_fields() -> None:
@@ -36,6 +36,33 @@ def test_prepare_hadith_row_preserves_null_chapter_without_metadata() -> None:
     prepared = _prepare_hadith_row(
         {"collection_id": 3},
         {"number": 10, "arab": "arabic", "id": "translation"},
+    )
+
+    assert prepared["chapter_id"] is None
+
+
+def test_prepare_hadith_row_includes_text_syarah_when_present() -> None:
+    prepared = _prepare_hadith_row(
+        {"collection_id": 10},
+        {"number": 1, "arab": "arabic", "id": "translation", "syarah": "syarah text"},
+    )
+
+    assert prepared["text_syarah"] == "syarah text"
+
+
+def test_prepare_hadith_row_text_syarah_none_when_missing() -> None:
+    prepared = _prepare_hadith_row(
+        {"collection_id": 10},
+        {"number": 1, "arab": "arabic", "id": "translation"},
+    )
+
+    assert prepared["text_syarah"] is None
+
+
+def test_prepare_hadith_row_preserves_null_chapter_without_metadata_nawawi() -> None:
+    prepared = _prepare_hadith_row(
+        {"collection_id": 10},
+        {"number": 1, "arab": "arabic", "id": "translation"},
     )
 
     assert prepared["chapter_id"] is None

@@ -25,6 +25,7 @@ DATA_RAW = ROOT / "data" / "raw"
 # ── Quran Data ────────────────────────────────────────────────────────
 
 QURAN_JSON = DATA_RAW / "quran" / "quran.json"
+QURAN_TAFSIR_JSON = DATA_RAW / "quran" / "quran-tafsir.json"
 
 QURAN_SURAH_NAMES = {
     1: ("الفاتحة", "Al-Fatihah", "Meccan"),
@@ -155,6 +156,7 @@ HADITH_ID_FILES = {
     "muslim": DATA_RAW / "hadith-id" / "muslim.json",
     "nasai": DATA_RAW / "hadith-id" / "nasai.json",
     "tirmidhi": DATA_RAW / "hadith-id" / "tirmidzi.json",
+    "nawawi40": DATA_RAW / "hadith-id" / "nawawi40.json",
 }
 
 HADITH_COLLECTIONS_ID = {
@@ -167,6 +169,7 @@ HADITH_COLLECTIONS_ID = {
     "muslim": {"name_eng": "Muslim", "slug": "muslim"},
     "nasai": {"name_eng": "Nasai", "slug": "nasai"},
     "tirmidhi": {"name_eng": "Tirmidzi", "slug": "tirmidhi"},
+    "nawawi40": {"name_eng": "40 Hadith Nawawi", "slug": "nawawi40"},
 }
 
 HADITH_BOOKS = {
@@ -222,10 +225,26 @@ def _load_quran_translation(path: Path) -> dict[tuple[int, int], str]:
     return result
 
 
+def _load_quran_tafsir(path: Path) -> dict[tuple[int, int], dict]:
+    with open(path) as f:
+        data = json.load(f)
+    result = {}
+    for entry in data:
+        result[(entry["surah"], entry["verse"])] = {
+            "kemenag_short": entry.get("kemenag_short", ""),
+            "kemenag_long": entry.get("kemenag_long", ""),
+            "quraish": entry.get("quraish", ""),
+            "jalalayn": entry.get("jalalayn", ""),
+        }
+    return result
+
+
 def ingest_quran(session: Session) -> dict:
     print("\n=== INGEST QURAN ===")
     arabic = _load_quran_arabic(QURAN_JSON)
     translation = _load_quran_translation(DATA_RAW / "quran" / "quran-id.json")
+    tafsir_map = _load_quran_tafsir(QURAN_TAFSIR_JSON)
+    print(f"  Loaded {len(tafsir_map)} tafsir entries")
 
     stats = {"surahs": 0, "verses": 0}
 
@@ -259,12 +278,14 @@ def ingest_quran(session: Session) -> dict:
     batch = []
     for (surah, verse), arabic_text in sorted(arabic.items()):
         trans = translation.get((surah, verse), "")
+        taf = tafsir_map.get((surah, verse))
         batch.append(
             {
                 "surah_id": surah,
                 "verse_number": verse,
                 "text_arabic": arabic_text,
                 "text_translation": trans,
+                "text_tafsir": json.dumps(taf) if taf else None,
             }
         )
         if len(batch) >= 500:
@@ -283,7 +304,8 @@ def ingest_quran(session: Session) -> dict:
 
 def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
     values = ", ".join(
-        f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch))
+        f"(:sid_{i}, :vn_{i}, :ar_{i}, :tr_{i}, CAST(:tf_{i} AS jsonb))"
+        for i in range(len(batch))
     )
     params = {}
     for i, v in enumerate(batch):
@@ -291,12 +313,15 @@ def _insert_verses_batch(session: Session, batch: list[dict]) -> None:
         params[f"vn_{i}"] = v["verse_number"]
         params[f"ar_{i}"] = v["text_arabic"]
         params[f"tr_{i}"] = v["text_translation"]
+        params[f"tf_{i}"] = v["text_tafsir"]
+
     session.execute(
-        text(f"""INSERT INTO verses (surah_id, verse_number, text_arabic, text_translation)
+        text(f"""INSERT INTO verses (surah_id, verse_number, text_arabic, text_translation, text_tafsir)
                  VALUES {values}
                  ON CONFLICT (surah_id, verse_number) DO UPDATE SET
                      text_arabic = EXCLUDED.text_arabic,
-                     text_translation = EXCLUDED.text_translation"""),
+                     text_translation = EXCLUDED.text_translation,
+                     text_tafsir = EXCLUDED.text_tafsir"""),
         params,
     )
 
@@ -386,6 +411,7 @@ def _prepare_hadith_row(meta: dict, row: dict) -> dict:
         "text_arabic": row.get("arab", ""),
         "text_translation": row.get("id", ""),
         "grade": None,
+        "text_syarah": row.get("syarah") or None,
     }
 
 
@@ -414,7 +440,8 @@ def _insert_hadith_books_batch(
 
 def _insert_hadith_batch(session: Session, batch: list[dict]) -> None:
     values = ", ".join(
-        f"(:cid_{i}, :chid_{i}, :num_{i}, :ar_{i}, :tr_{i})" for i in range(len(batch))
+        f"(:cid_{i}, :chid_{i}, :num_{i}, :ar_{i}, :tr_{i}, :sy_{i})"
+        for i in range(len(batch))
     )
     params = {}
     for i, h in enumerate(batch):
@@ -423,13 +450,15 @@ def _insert_hadith_batch(session: Session, batch: list[dict]) -> None:
         params[f"num_{i}"] = h["hadith_number"]
         params[f"ar_{i}"] = h["text_arabic"]
         params[f"tr_{i}"] = h["text_translation"]
+        params[f"sy_{i}"] = h["text_syarah"]
 
     session.execute(
-        text(f"""INSERT INTO hadith (collection_id, chapter_id, hadith_number, text_arabic, text_translation)
+        text(f"""INSERT INTO hadith (collection_id, chapter_id, hadith_number, text_arabic, text_translation, text_syarah)
                  VALUES {values}
                  ON CONFLICT (collection_id, hadith_number) DO UPDATE SET
                      text_arabic = EXCLUDED.text_arabic,
-                     text_translation = EXCLUDED.text_translation"""),
+                     text_translation = EXCLUDED.text_translation,
+                     text_syarah = EXCLUDED.text_syarah"""),
         params,
     )
 
