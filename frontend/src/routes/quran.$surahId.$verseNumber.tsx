@@ -20,6 +20,9 @@ function VerseDetailPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const [tafsirTab, setTafsirTab] = useState<"kemenag" | "quraish" | "jalalayn">("kemenag");
+  const [kemenagLong, setKemenagLong] = useState(false);
+
   const surahMeta = surahs?.find((s) => s.id === numSurah);
   const totalVerses = surahMeta?.verses_count ?? 0;
   const hasPrev = numVerse > 1;
@@ -48,9 +51,6 @@ function VerseDetailPage() {
   }
 
   if (!data) return null;
-
-  const [tafsirTab, setTafsirTab] = useState<"kemenag" | "quraish" | "jalalayn">("kemenag");
-  const [kemenagLong, setKemenagLong] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -141,7 +141,11 @@ function VerseDetailPage() {
                       : "border-neutral-200 text-neutral-600 hover:border-emerald-300"
                   }`}
                 >
-                  {tab === "kemenag" ? "Kemenag" : tab === "quraish" ? "Quraish Shihab" : "Al-Jalalayn"}
+                  {tab === "kemenag"
+                    ? "Kemenag"
+                    : tab === "quraish"
+                      ? "Quraish Shihab"
+                      : "Al-Jalalayn"}
                 </button>
               ))}
             </div>
@@ -169,9 +173,7 @@ function VerseDetailPage() {
             </p>
           </>
         ) : (
-          <p className="text-sm text-neutral-400">
-            Tafsir belum tersedia untuk ayat ini.
-          </p>
+          <p className="text-sm text-neutral-400">Tafsir belum tersedia untuk ayat ini.</p>
         )}
       </div>
     </div>
