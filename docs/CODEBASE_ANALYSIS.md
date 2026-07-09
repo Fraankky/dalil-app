@@ -202,6 +202,8 @@ Urutan migration:
 
 **Dampak**: History migration kacau. Jika ada data di DB, running `alembic upgrade head` bisa gagal karena `DELETE FROM embeddings` di migration 0005 dan 0007. Juga ada versi `be79b21cfad0` yang tidak mengikuti skema penamaan.
 
+**→ RESOLVED 2026-07-09**: SQUASHED 0001-0007 + be79b21cfad0 into single 0001 baseline (`5d1a842`).
+
 #### [SEDANG] Vector Dimension Hardcoded di Model
 
 `backend/app/models/models.py:127`: `embedding = Column(Vector(384), nullable=False)`
@@ -246,6 +248,8 @@ engine = create_async_engine(
 **Dampak**: User hanya bisa search 10 kali per menit dari IP yang sama. Testing jadi sangat menyebalkan. Untuk development, seharusnya lebih longgar.
 
 **Fix**: Pakai environment variable untuk rate limit, atau set default lebih tinggi (60/minute).
+
+**→ RESOLVED 2026-07-09**: Raised to `60/minute` + proxy-aware key func (`6c35e01`).
 
 #### [SEDANG] Global Exception Handler Akan Return 500 untuk Semua Error
 
@@ -362,15 +366,45 @@ Frontend depends on backend tanpa healthcheck. Jika backend crash, frontend teta
 
 `backend/Dockerfile` dan `frontend/Dockerfile.dev` — hanya untuk development. Production perlu multi-stage build, image optimization, dll.
 
+**→ RESOLVED 2026-07-09**: `Dockerfile.prod` multi-stage (venv, non-root, gunicorn --preload -w 2) + `.dockerignore` (`5b5be64`). docker-compose.prod.yml with mem_limit, internal network, certbot (`20f0258`).
+
 ### 4.7 Masalah Keamanan
 
 #### [SEDANG] CORS Allow All Methods & Headers
 
-`main.py:62-63`: `allow_methods=["*"], allow_headers=["*"]` — cukup longgar. Harus disesuaikan.
+`main.py:76-82`: `allow_methods=["*"], allow_headers=["*"]` — cukup longgar. Harus disesuaikan.
+
+**→ RESOLVED 2026-07-09**: Scoped to `allow_methods=["GET"]`, `allow_headers=["Content-Type", "Accept"]`, and origins from config. Prod startup rejects wildcard with `allow_credentials=True` (`main.py:29-30`).
 
 #### [RENDAH] Debug=True di Default Config
 
-`config.py:22`: `debug: bool = True` — di production, debug harus false.
+`config.py:26`: `debug: bool = False` — di production, debug harus false. Validator prevents debug=True + env=production.
+
+**→ RESOLVED 2026-07-09**: Default changed to `False` (`config.py:26`). Validator raises `ValueError` if debug=true in production (`config.py:36-38`). Exception handler never leaks detail to client (`main.py:65-73`).
+
+#### [RENDAH] No Rate-Limit Middleware (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: `SlowAPIMiddleware` added (`main.py:48`). Proxy-aware key func uses XFF first hop (`6c35e01`).
+
+#### [RENDAH] No SSL Termination (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: nginx reverse proxy + Certbot + Let's Encrypt TLS in docker-compose.prod.yml (`20f0258`).
+
+#### [RENDAH] Celery — No Time / Task Limits (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: `task_time_limit=300`, `task_soft_time_limit=240`, `task_acks_late=True`, `worker_max_tasks_per_child=100`, `result_expires=3600` (`e4475cc`).
+
+#### [RENDAH] Public DB / Redis Ports (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: Prod docker-compose places db + redis on internal network only; no port exposure (`20f0258`).
+
+#### [RENDAH] No Backup Plan (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: `pg_dump` cron documented in `deploy/README.md`; retention 14d local + 90d remote.
+
+#### [RENDAH] DevTools in Production Dependencies (sebelumnya)
+
+**→ RESOLVED 2026-07-09**: `@tanstack/router-devtools` moved to `devDependencies` (`819ef10`).
 
 ---
 

@@ -13,7 +13,7 @@
 | **Search Engine** | pgvector `ivfflat` / `hnsw` indexing | Cosine similarity, hybrid with BM25 |
 | **Task Queue** | Celery + Redis | Async embedding generation, data imports |
 | **Object Storage** | MinIO (dev) / S3 (prod) | Model files, static assets |
-| **Deployment** | Docker Compose (dev), Vercel (frontend) + Railway/Fly.io (backend) | Simple ops for MVP |
+| **Deployment** | Docker Compose (dev), Cloudflare Pages (frontend) + VPS Docker Compose prod (backend + Postgres + Redis + nginx + Certbot) | Simple ops for MVP |
 
 ---
 
@@ -423,3 +423,45 @@ dalil-app/
 - **Prometheus + Grafana** — query latency, embedding throughput
 - **Vercel Analytics** — frontend performance, user behavior
 - **Postgres pg_stat_statements** — slow query detection
+
+---
+
+## 13. Production Deployment
+
+### 13.1 Network Topology
+
+```
+Cloudflare
+├── CF Pages (frontend — app.dalil.id)
+│   └── serves Vite dist/, proxies /api/* to VPS
+└── CF proxy (VPS — app.dalil.id/api/*)
+    └── nginx (:443) → backend (:8000)
+                     → Postgres (:5432, internal)
+                     → Redis (:6379, internal)
+```
+
+### 13.2 DNS
+
+`app.dalil.id` → Cloudflare proxied. Frontend on CF Pages. API on the same domain with nginx proxying `/api/*` to the FastAPI backend.
+
+### 13.3 TLS
+
+Certbot + Let's Encrypt via docker-compose. nginx terminates TLS. Auto-renewal via certbot container.
+
+### 13.4 Migrations
+
+Automated via `entrypoint.sh` — runs `alembic upgrade head` before gunicorn starts. No manual migration step on deploy.
+
+### 13.5 Re-ingest
+
+```bash
+docker compose run --rm backend python data/scripts/ingest.py
+```
+
+### 13.6 Backups
+
+`pg_dump` via cron on VPS host, shipped to object storage. Retention: 14 days local, 90 days remote.
+
+### 13.7 Secrets Rotation
+
+Update `.env.prod` on VPS, then `docker compose down && docker compose up -d` to pick up new values.
