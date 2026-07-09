@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
+    # Database SSL (set true for external/managed Postgres; leave false for internal Docker DB)
+    db_ssl: bool = False
+
     # Embedding
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     embedding_dim: int = 384

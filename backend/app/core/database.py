@@ -1,5 +1,6 @@
-# ponytail: two engines — async (asyncpg) here uses connect_args["ssl"];
-# sync (psycopg2) in app/tasks/embeddings.py uses URL ?sslmode=require. Keep separate.
+# ponytail: async (asyncpg) uses connect_args["ssl"] when DB_SSL=true;
+# sync (psycopg2) uses ?sslmode=require via settings.database_url_sync.
+# Both default off — internal Docker DB has ssl=off. Enable for external/managed Postgres.
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -15,7 +16,7 @@ connect_args: dict[str, Any] = {
     }
 }
 
-if settings.is_prod:
+if settings.db_ssl:
     connect_args["ssl"] = True
 
 engine = create_async_engine(

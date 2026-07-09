@@ -12,7 +12,17 @@ export class ApiError extends Error {
 async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   const signals: AbortSignal[] = [AbortSignal.timeout(10_000)];
   if (init?.signal) signals.push(init.signal);
-  return fetch(url, { ...init, signal: AbortSignal.any(signals) });
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.any(signals) });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new ApiError("Permintaan waktu habis. Coba lagi.", 0);
+    }
+    if (e instanceof DOMException && e.name === "AbortError" && !signals[0].aborted) {
+      throw new ApiError("Permintaan dibatalkan.", 0);
+    }
+    throw new ApiError("Gagal terhubung ke server.", 0);
+  }
 }
 
 async function readJson<T>(res: Response): Promise<T> {

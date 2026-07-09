@@ -59,23 +59,41 @@ function VerseDetailPage() {
         >
           &larr; Kembali ke surat
         </Link>
-        <nav className="flex items-center gap-2">
-          <Link
-            to="/quran/$surahId/$verseNumber"
-            params={{ surahId: String(numSurah), verseNumber: String(numVerse - 1) }}
-            className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasPrev ? "pointer-events-none opacity-30" : ""}`}
-            aria-label="Sebelumnya"
-          >
-            &larr; Sebelumnya
-          </Link>
-          <Link
-            to="/quran/$surahId/$verseNumber"
-            params={{ surahId: String(numSurah), verseNumber: String(numVerse + 1) }}
-            className={`px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all ${!hasNext ? "pointer-events-none opacity-30" : ""}`}
-            aria-label="Selanjutnya"
-          >
-            Berikutnya &rarr;
-          </Link>
+        <nav className="flex items-center gap-2" aria-label="Navigasi ayat">
+          {hasPrev ? (
+            <Link
+              to="/quran/$surahId/$verseNumber"
+              params={{ surahId: String(numSurah), verseNumber: String(numVerse - 1) }}
+              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all"
+              aria-label="Sebelumnya"
+            >
+              &larr; Sebelumnya
+            </Link>
+          ) : (
+            <span
+              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg opacity-30"
+              aria-disabled="true"
+            >
+              &larr; Sebelumnya
+            </span>
+          )}
+          {hasNext ? (
+            <Link
+              to="/quran/$surahId/$verseNumber"
+              params={{ surahId: String(numSurah), verseNumber: String(numVerse + 1) }}
+              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all"
+              aria-label="Selanjutnya"
+            >
+              Berikutnya &rarr;
+            </Link>
+          ) : (
+            <span
+              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg opacity-30"
+              aria-disabled="true"
+            >
+              Berikutnya &rarr;
+            </span>
+          )}
         </nav>
       </div>
 
