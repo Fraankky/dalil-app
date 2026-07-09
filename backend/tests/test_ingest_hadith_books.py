@@ -1,4 +1,4 @@
-from data.scripts.ingest import _extract_hadith_book, _load_quran_tafsir, _prepare_hadith_row
+from data.scripts.ingest import _extract_hadith_book, _prepare_hadith_row
 
 
 def test_extract_hadith_book_reads_common_book_fields() -> None:
