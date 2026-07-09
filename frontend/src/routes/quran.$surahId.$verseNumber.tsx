@@ -1,6 +1,7 @@
 import { fetchSurahs, fetchVerseDetail } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 import { rootRoute } from "./__root";
 
 function VerseDetailPage() {
@@ -47,6 +48,9 @@ function VerseDetailPage() {
   }
 
   if (!data) return null;
+
+  const [tafsirTab, setTafsirTab] = useState<"kemenag" | "quraish" | "jalalayn">("kemenag");
+  const [kemenagLong, setKemenagLong] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -122,10 +126,53 @@ function VerseDetailPage() {
       </div>
 
       <div className="mt-8 p-6 border border-neutral-100 rounded-xl bg-neutral-50">
-        <h2 className="font-semibold text-neutral-800 mb-2">Tafsir dan Penjelasan</h2>
-        <p className="text-sm text-neutral-400">
-          Tafsir untuk ayat ini akan ditambahkan pada fase berikutnya.
-        </p>
+        <h2 className="font-semibold text-neutral-800 mb-4">Tafsir dan Penjelasan</h2>
+        {data.tafsir ? (
+          <>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {(["kemenag", "quraish", "jalalayn"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setTafsirTab(tab)}
+                  className={`px-3 py-1 text-sm border rounded-lg transition-all ${
+                    tafsirTab === tab
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                      : "border-neutral-200 text-neutral-600 hover:border-emerald-300"
+                  }`}
+                >
+                  {tab === "kemenag" ? "Kemenag" : tab === "quraish" ? "Quraish Shihab" : "Al-Jalalayn"}
+                </button>
+              ))}
+            </div>
+
+            {tafsirTab === "kemenag" && (
+              <div className="mb-3">
+                <button
+                  type="button"
+                  onClick={() => setKemenagLong(!kemenagLong)}
+                  className="px-2 py-0.5 text-xs border border-neutral-200 rounded text-neutral-600 hover:border-emerald-300"
+                >
+                  {kemenagLong ? "Ringkas" : "Panjang"}
+                </button>
+              </div>
+            )}
+
+            <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
+              {tafsirTab === "kemenag"
+                ? kemenagLong
+                  ? data.tafsir.kemenag_long || data.tafsir.kemenag_short
+                  : data.tafsir.kemenag_short || data.tafsir.kemenag_long
+                : tafsirTab === "quraish"
+                  ? data.tafsir.quraish
+                  : data.tafsir.jalalayn}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-neutral-400">
+            Tafsir belum tersedia untuk ayat ini.
+          </p>
+        )}
       </div>
     </div>
   );

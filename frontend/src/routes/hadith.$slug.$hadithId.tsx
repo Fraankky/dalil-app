@@ -78,9 +78,15 @@ function HadithDetailPage() {
 
       <div className="mt-8 p-6 border border-neutral-100 rounded-xl bg-neutral-50">
         <h2 className="font-semibold text-neutral-800 mb-2">Syarah dan Penjelasan</h2>
-        <p className="text-sm text-neutral-400">
-          Syarah untuk hadis ini akan ditambahkan pada fase berikutnya.
-        </p>
+        {data.text_syarah ? (
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
+            {data.text_syarah}
+          </p>
+        ) : (
+          <p className="text-sm text-neutral-400">
+            Syarah belum tersedia untuk hadis ini.
+          </p>
+        )}
       </div>
     </div>
   );

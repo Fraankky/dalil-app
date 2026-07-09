@@ -120,6 +120,12 @@ export interface VerseDetailResponse {
   text_translation: string | null;
   juz: number | null;
   revelation_type: string | null;
+  tafsir: {
+    kemenag_short: string;
+    kemenag_long: string;
+    quraish: string;
+    jalalayn: string;
+  } | null;
 }
 
 export interface HadithCollectionInfo {
@@ -140,6 +146,7 @@ export interface HadithInfo {
   text_arabic: string;
   text_translation: string | null;
   grade: string | null;
+  text_syarah: string | null;
 }
 
 export interface HadithListResponse {
