@@ -70,47 +70,66 @@ function HomePage() {
       </form>
 
       {stats && (
-        <div className="mb-8">
-          <div className="flex flex-wrap justify-center gap-4 mb-3">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
-              <BookOpenIcon className="size-5 text-emerald-600" />
+        <div className="mb-10">
+          <div className="flex flex-wrap justify-center gap-3 mb-6">
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
+              <BookOpenIcon className="size-4 text-neutral-700" />
               <div>
-                <span className="font-bold text-neutral-900">{stats.total_surahs}</span>
-                <span className="text-sm text-neutral-500 ml-1">Surah</span>
+                <span className="font-semibold text-[#2F3437]">{stats.total_surahs}</span>
+                <span className="text-sm text-[#787774] ml-1">Surah</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
-              <BookOpenIcon className="size-5 text-emerald-600" />
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
+              <BookOpenIcon className="size-4 text-neutral-700" />
               <div>
-                <span className="font-bold text-neutral-900">{stats.total_verses.toLocaleString("id")}</span>
-                <span className="text-sm text-neutral-500 ml-1">Ayat</span>
+                <span className="font-semibold text-[#2F3437]">{stats.total_verses.toLocaleString("id")}</span>
+                <span className="text-sm text-[#787774] ml-1">Ayat</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
-              <BookOpenIcon className="size-5 text-emerald-600" />
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
+              <BookOpenIcon className="size-4 text-neutral-700" />
               <div>
-                <span className="font-bold text-neutral-900">{stats.total_collections}</span>
-                <span className="text-sm text-neutral-500 ml-1">Koleksi</span>
+                <span className="font-semibold text-[#2F3437]">{stats.total_collections}</span>
+                <span className="text-sm text-[#787774] ml-1">Koleksi</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
-              <BookOpenIcon className="size-5 text-emerald-600" />
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
+              <BookOpenIcon className="size-4 text-neutral-700" />
               <div>
-                <span className="font-bold text-neutral-900">{stats.total_hadith.toLocaleString("id")}</span>
-                <span className="text-sm text-neutral-500 ml-1">Hadits</span>
+                <span className="font-semibold text-[#2F3437]">{stats.total_hadith.toLocaleString("id")}</span>
+                <span className="text-sm text-[#787774] ml-1">Hadits</span>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
               Tafsir Kemenag
             </span>
-            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
               Tafsir Quraish Shihab
             </span>
-            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
               Tafsir Jalalayn
             </span>
+          </div>
+          <div className="text-center">
+            <span className="text-[11px] font-medium uppercase tracking-widest text-[#787774] mb-3 block">
+              Populer
+            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              {["Sabar", "Puasa", "Sholat", "Tawakal", "Sedekah", "Taubat", "Syukur", "Ikhlas"].map(
+                (topic) => (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => handleSuggestion(topic)}
+                    className="px-3 py-1 text-xs font-medium rounded-full transition-colors bg-[#EDF3EC] text-[#346538] hover:bg-[#346538] hover:text-white"
+                  >
+                    {topic}
+                  </button>
+                ),
+              )}
+            </div>
           </div>
         </div>
       )}
