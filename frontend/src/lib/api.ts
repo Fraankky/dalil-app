@@ -206,3 +206,21 @@ export async function fetchCollectionHadith(
   if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
   return readJson<HadithListResponse>(res);
 }
+
+export interface StatsResponse {
+  total_verses: number;
+  total_surahs: number;
+  total_hadith: number;
+  total_collections: number;
+  total_embeddings: number;
+  quran_embeddings: number;
+  hadith_embeddings: number;
+  model_name: string;
+  model_dim: number;
+}
+
+export async function fetchStats(): Promise<StatsResponse> {
+  const res = await apiFetch(`${API_BASE}/stats`);
+  if (!res.ok) throw new ApiError("Gagal memuat data. Coba lagi nanti.", res.status);
+  return readJson<StatsResponse>(res);
+}

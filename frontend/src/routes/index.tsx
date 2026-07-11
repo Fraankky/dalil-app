@@ -1,11 +1,19 @@
-import { SearchIcon } from "@/components/icons";
+import { BookOpenIcon, SearchIcon } from "@/components/icons";
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchStats } from "@/lib/api";
 import { rootRoute } from "./__root";
 
 function HomePage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+
+  const { data: stats } = useQuery({
+    queryKey: ["stats"],
+    queryFn: fetchStats,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -60,6 +68,52 @@ function HomePage() {
           </button>
         </div>
       </form>
+
+      {stats && (
+        <div className="mb-8">
+          <div className="flex flex-wrap justify-center gap-4 mb-3">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+              <BookOpenIcon className="size-5 text-emerald-600" />
+              <div>
+                <span className="font-bold text-neutral-900">{stats.total_surahs}</span>
+                <span className="text-sm text-neutral-500 ml-1">Surah</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+              <BookOpenIcon className="size-5 text-emerald-600" />
+              <div>
+                <span className="font-bold text-neutral-900">{stats.total_verses.toLocaleString("id")}</span>
+                <span className="text-sm text-neutral-500 ml-1">Ayat</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+              <BookOpenIcon className="size-5 text-emerald-600" />
+              <div>
+                <span className="font-bold text-neutral-900">{stats.total_collections}</span>
+                <span className="text-sm text-neutral-500 ml-1">Koleksi</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-neutral-200 shadow-sm">
+              <BookOpenIcon className="size-5 text-emerald-600" />
+              <div>
+                <span className="font-bold text-neutral-900">{stats.total_hadith.toLocaleString("id")}</span>
+                <span className="text-sm text-neutral-500 ml-1">Hadits</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+              Tafsir Kemenag
+            </span>
+            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+              Tafsir Quraish Shihab
+            </span>
+            <span className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">
+              Tafsir Jalalayn
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap justify-center gap-3">
         {["Sabar dalam Islam", "Hak tetangga", "الصبر", "Ampunan", "Jujur dalam berdagang"].map(
