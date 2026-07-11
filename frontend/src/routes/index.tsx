@@ -69,9 +69,31 @@ function HomePage() {
         </div>
       </form>
 
+      <div className="text-center mb-6">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-[#787774] mb-3 block">
+          Populer
+        </span>
+        <div className="flex flex-wrap justify-center gap-2">
+          {["Sabar", "Puasa", "Sholat", "Tawakal", "Sedekah", "Taubat", "Syukur", "Ikhlas"].map(
+            (topic) => (
+              <button
+                key={topic}
+                type="button"
+                onClick={() => handleSuggestion(topic)}
+                className="px-3 py-1 text-xs font-medium rounded-full transition-colors bg-[#EDF3EC] text-[#346538] hover:bg-[#346538] hover:text-white"
+              >
+                {topic}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+
+      <hr className="mx-auto max-w-xs border-t border-[#EAEAEA] mb-6" />
+
       {stats && (
         <div className="mb-10">
-          <div className="flex flex-wrap justify-center gap-3 mb-6">
+          <div className="flex flex-wrap justify-center gap-3 mb-4">
             <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
               <BookOpenIcon className="size-4 text-neutral-700" />
               <div>
@@ -101,7 +123,7 @@ function HomePage() {
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2">
             <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
               Tafsir Kemenag
             </span>
@@ -111,25 +133,6 @@ function HomePage() {
             <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
               Tafsir Jalalayn
             </span>
-          </div>
-          <div className="text-center">
-            <span className="text-[11px] font-medium uppercase tracking-widest text-[#787774] mb-3 block">
-              Populer
-            </span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {["Sabar", "Puasa", "Sholat", "Tawakal", "Sedekah", "Taubat", "Syukur", "Ikhlas"].map(
-                (topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() => handleSuggestion(topic)}
-                    className="px-3 py-1 text-xs font-medium rounded-full transition-colors bg-[#EDF3EC] text-[#346538] hover:bg-[#346538] hover:text-white"
-                  >
-                    {topic}
-                  </button>
-                ),
-              )}
-            </div>
           </div>
         </div>
       )}
