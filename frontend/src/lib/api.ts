@@ -70,6 +70,7 @@ export interface SearchResponse {
   took_ms: number;
   page: number;
   pages: number;
+  search_type?: "keyword" | "semantic";
 }
 
 export async function fetchSearch(params: SearchParams): Promise<SearchResponse> {

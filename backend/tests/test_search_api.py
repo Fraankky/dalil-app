@@ -15,7 +15,7 @@ async def _override_db() -> AsyncIterator[object]:
 def test_search_endpoint_parses_sources_and_returns_results(monkeypatch) -> None:
     captured = {}
 
-    async def fake_semantic_search(db, query, sources, limit, offset, min_score):
+    async def fake_search_service(db, query, sources, limit, offset, min_score):
         captured.update(
             {
                 "db": db,
@@ -49,7 +49,7 @@ def test_search_endpoint_parses_sources_and_returns_results(monkeypatch) -> None
         )
 
     app.dependency_overrides[get_db] = _override_db
-    monkeypatch.setattr(search_api, "semantic_search", fake_semantic_search)
+    monkeypatch.setattr(search_api, "search_service", fake_search_service)
 
     try:
         response = TestClient(app).get(

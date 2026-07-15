@@ -2,7 +2,7 @@ import { BookOpenIcon, FilterIcon, SearchIcon, StarIcon } from "@/components/ico
 import { type SearchResult, fetchSearch } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { rootRoute } from "./__root";
 
 const HADITH_SOURCES = [
@@ -17,21 +17,40 @@ const HADITH_SOURCES = [
   { slug: "tirmidhi", label: "Tirmidzi" },
 ];
 
+const HADITH_SLUGS = HADITH_SOURCES.map((s) => s.slug);
+
+function highlightMatch(text: string | null, query: string): ReactNode {
+  if (!text || !query) return text ?? null;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  if (parts.length <= 1) return text;
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase() ? <mark key={i} className="bg-yellow-200 rounded-sm">{part}</mark> : part,
+  );
+}
+
 function SearchPage() {
   const navigate = useNavigate();
   const { q, page } = useSearch({ from: "/search" });
   const [inputValue, setInputValue] = useState(q || "");
+  const [activeTab, setActiveTab] = useState<"all" | "quran" | "hadith">("all");
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  const sourcesParam = (() => {
+    if (activeTab === "all") return undefined;
+    if (activeTab === "quran") return "quran";
+    return selectedSources.length > 0 ? selectedSources.join(",") : HADITH_SLUGS.join(",");
+  })();
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["search", q, page, selectedSources],
+    queryKey: ["search", q, page, activeTab, selectedSources],
     queryFn: () =>
       fetchSearch({
         q,
         limit: 20,
         offset: (page - 1) * 20,
-        sources: selectedSources.length > 0 ? selectedSources.join(",") : undefined,
+        sources: sourcesParam,
       }),
     enabled: !!q,
   });
@@ -43,10 +62,22 @@ function SearchPage() {
     }
   };
 
+  const handleTabChange = (tab: "all" | "quran" | "hadith") => {
+    setActiveTab(tab);
+    if (tab !== "hadith") setShowFilters(false);
+    navigate({ to: "/search", search: { q, page: 1 } });
+  };
+
   const toggleSource = (slug: string) => {
-    setSelectedSources((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
-    );
+    if (activeTab !== "hadith") return;
+    setSelectedSources((prev) => {
+      if (prev.length === 0) return HADITH_SLUGS.filter((s) => s !== slug);
+      if (prev.includes(slug)) {
+        const next = prev.filter((s) => s !== slug);
+        return next.length === 0 ? [] : next;
+      }
+      return [...prev, slug];
+    });
     navigate({ to: "/search", search: { q, page: 1 } });
   };
 
@@ -78,7 +109,25 @@ function SearchPage() {
         </button>
       </div>
 
-      {showFilters && (
+      <div className="flex gap-1 mb-5 p-1 bg-neutral-100 rounded-xl">
+        {(["all", "quran", "hadith"] as const).map((tab) => {
+          const label = tab === "all" ? "Semua" : tab === "quran" ? "Qur'an" : "Hadits";
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => handleTabChange(tab)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                activeTab === tab ? "bg-white text-emerald-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {showFilters && activeTab === "hadith" && (
         <div className="mb-6 p-4 border border-neutral-200 rounded-xl bg-neutral-50">
           <p className="text-sm font-medium text-neutral-700 mb-2">Filter sumber:</p>
           <div className="flex flex-wrap gap-2">
@@ -88,7 +137,7 @@ function SearchPage() {
                 type="button"
                 onClick={() => toggleSource(s.slug)}
                 className={`px-3 py-1 text-xs rounded-full border transition-all ${
-                  selectedSources.includes(s.slug)
+                  selectedSources.length === 0 || selectedSources.includes(s.slug)
                     ? "bg-emerald-600 text-white border-emerald-600"
                     : "bg-white text-neutral-600 border-neutral-300 hover:border-emerald-400"
                 }`}
@@ -125,7 +174,7 @@ function SearchPage() {
 
           <div className="space-y-4">
             {data.results.map((result, i) => (
-              <ResultCard key={`${result.type}-${result.source_id}-${i}`} result={result} />
+              <ResultCard key={`${result.type}-${result.source_id}-${i}`} result={result} query={q} />
             ))}
           </div>
 
@@ -214,7 +263,7 @@ function SearchBar({
   );
 }
 
-function ResultCard({ result }: { result: SearchResult }) {
+function ResultCard({ result, query }: { result: SearchResult; query: string }) {
   const linkProps:
     | { to: "/quran/$surahId/$verseNumber"; params: { surahId: string; verseNumber: string } }
     | { to: "/quran/$surahId"; params: { surahId: string } }
@@ -251,32 +300,34 @@ function ResultCard({ result }: { result: SearchResult }) {
   const card = (
     <div className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-              result.type === "quran"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-blue-100 text-blue-700"
-            }`}
-          >
-            <BookOpenIcon className="w-3 h-3" />
-            {result.type === "quran" ? "Al-Qur'an" : "Hadis"}
-          </span>
-          {result.type === "quran" && result.surah_name && (
-            <span className="text-sm font-medium text-neutral-700">
-              {result.surah_name}{" "}
-              {result.verse_number && `(${result.surah_number}:${result.verse_number})`}
-            </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {result.type === "quran" && (
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                <BookOpenIcon className="w-3 h-3" />
+                QS {result.surah_number}:{result.verse_number}
+              </span>
+              {result.surah_name && (
+                <span className="text-sm font-medium text-neutral-700">{result.surah_name}</span>
+              )}
+            </>
           )}
-          {result.type === "hadith" && (
-            <div className="flex items-center gap-2 flex-wrap">
+          {result.type === "hadith" && result.hadith_number && (
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                <BookOpenIcon className="w-3 h-3" />
+                No. {result.hadith_number}
+              </span>
               <span className="text-sm font-medium text-neutral-700">{result.collection_name}</span>
               {result.grade && (
                 <span className="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded">
                   {result.grade}
                 </span>
               )}
-            </div>
+            </>
+          )}
+          {result.type === "hadith" && !result.hadith_number && (
+            <span className="text-sm font-medium text-neutral-700">{result.collection_name}</span>
           )}
         </div>
         <div className="flex items-center gap-1 text-xs shrink-0">
@@ -291,7 +342,7 @@ function ResultCard({ result }: { result: SearchResult }) {
 
       {result.text_translation && (
         <p className="text-sm text-neutral-600 border-t border-neutral-100 pt-3 leading-relaxed">
-          {result.text_translation}
+          {highlightMatch(result.text_translation, query)}
         </p>
       )}
 

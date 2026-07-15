@@ -45,3 +45,5 @@ data/raw/
 # moon
 .moon/cache
 .moon/docker
+
+.agents

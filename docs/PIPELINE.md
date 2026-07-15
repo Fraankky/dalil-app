@@ -89,7 +89,7 @@ Model multilingual-MiniLM dilatih pada korpus paralel multibahasa. Hasilnya:
                             ==================
 
   ┌────────────────────────────────────────────────────────────┐
-  │                Embedding Worker (Celery)                    │
+  │                Embedding Worker (Celery)                   │
   │                                                            │
   │  1. Baca batch 32 row dari PostgreSQL (`text_arabic`)      │
   │  2. Tambahkan prefix "passage: "                           │
@@ -97,7 +97,7 @@ Model multilingual-MiniLM dilatih pada korpus paralel multibahasa. Hasilnya:
   │  4. Normalisasi (L2 norm = 1.0)                            │
   │  5. Simpan vector ke tabel `embeddings` (source_type +     │
   │     source_id + embedding VECTOR(1024))                    │
-  │  6. Hitung text_hash (SHA-256) untuk cache-busting        │
+  │  6. Hitung text_hash (SHA-256) untuk cache-busting         │
   │                                                            │
   └────────────────────────┬───────────────────────────────────┘
                            │

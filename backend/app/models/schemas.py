@@ -36,6 +36,7 @@ class SearchResponse(BaseModel):
     took_ms: int
     page: int
     pages: int
+    search_type: Literal["keyword", "semantic"] = "keyword"
 
 
 class VerseResponse(BaseModel):

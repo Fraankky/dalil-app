@@ -14,24 +14,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.services.embedding import get_model, text_hash
+from app.services.embedding import embed_documents, text_hash
 from app.services.search import _vector_literal
-
-MODEL = None
-
-
-def get_model_singleton():
-    global MODEL
-    if MODEL is None:
-        print(f"Loading model: {settings.embedding_model}...")
-        t0 = time.monotonic()
-        MODEL = get_model()
-        print(f"  Loaded in {time.monotonic() - t0:.1f}s")
-    return MODEL
 
 
 def embed_source(source_type: str, batch_size: int) -> int:
-    model = get_model_singleton()
     engine = create_engine(settings.database_url_sync)
     total = 0
 
@@ -74,8 +61,7 @@ def embed_source(source_type: str, batch_size: int) -> int:
                     parts.append(r["text_translation"].strip())
                 docs.append("\n".join(parts))
 
-            prefixed = [f"passage: {d}" for d in docs]
-            vecs = model.encode(prefixed, batch_size=batch_size, normalize_embeddings=True)
+            vecs = embed_documents(docs, batch_size=batch_size)
 
             vals = []
             for row, vec in zip(rows, vecs):
