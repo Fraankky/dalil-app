@@ -1,3 +1,5 @@
+const ALLOWED = /^(search|quran|hadith|stats|meta)(\/.*)?$/;
+
 interface Env {
   BACKEND_URL?: string;
 }
@@ -11,11 +13,18 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   }
 
   const path = (params.path as string[]).join("/");
+  if (!ALLOWED.test(path)) {
+    return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
+  }
+
   const url = new URL(`/api/${path}`, env.BACKEND_URL);
   url.search = new URL(request.url).search;
 
   const headers = new Headers(request.headers);
   headers.delete("host");
+  headers.delete("cookie");
+  headers.delete("authorization");
+  headers.delete("x-forwarded-for");
 
   const init: RequestInit = {
     method: request.method,
