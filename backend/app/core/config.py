@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     # Embedding
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embedding_model_revision: str = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
     embedding_dim: int = 384
     embedding_batch_size: int = 32
 
@@ -39,6 +40,17 @@ class Settings(BaseSettings):
     def _validate_debug_in_prod(self) -> "Settings":
         if self.debug and self.env == "production":
             raise ValueError("DEBUG=true not allowed when ENV=production")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_prod(self) -> "Settings":
+        if self.is_prod:
+            for marker in ("postgres:postgres@", "@localhost:5432"):
+                if marker in self.database_url:
+                    raise ValueError(f"unsafe DATABASE_URL in production (contains {marker!r})")
+            origins = self.cors_origin_list
+            if not origins or "*" in origins or "null" in origins:
+                raise ValueError("invalid CORS_ORIGINS in production")
         return self
 
     @property

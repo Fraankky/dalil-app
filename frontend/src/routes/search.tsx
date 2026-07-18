@@ -261,7 +261,7 @@ export const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
   validateSearch: (params: Record<string, unknown>) => ({
-    q: typeof params.q === "string" ? params.q : "",
+    q: typeof params.q === "string" ? params.q.slice(0, 200) : "",
     page: Number(params.page) || 1,
     activeTab: (["all", "quran", "hadith"] as string[]).includes(params.activeTab as string)
       ? (params.activeTab as "all" | "quran" | "hadith")

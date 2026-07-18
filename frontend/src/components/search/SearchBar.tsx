@@ -11,6 +11,7 @@ export function SearchBar({ onSubmit }: { onSubmit: (e: React.FormEvent) => void
           type="text"
           name="q"
           defaultValue=""
+          maxLength={200}
           className="w-full px-3 py-3 bg-transparent outline-none text-[var(--text)] placeholder:text-[var(--text-3)]"
           aria-label="Cari dalil"
           placeholder="Perbaiki pencarian..."

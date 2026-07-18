@@ -1,6 +1,7 @@
 """Dalil — Semantic Search for Islamic Texts."""
 
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -83,6 +84,17 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.is_prod:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+@app.middleware("http")
 async def log_requests(request: Request, call_next):
     t0 = time.monotonic()
     response = await call_next(request)
@@ -97,7 +109,11 @@ async def healthz() -> dict[str, str]:
 
 
 @app.get("/readyz")
-async def readyz() -> JSONResponse:
+async def readyz(request: Request) -> JSONResponse:
+    token = request.headers.get("X-Health-Token", "")
+    expected = os.environ.get("HEALTH_TOKEN", "")
+    if expected and token != expected:
+        return JSONResponse(status_code=403, content={"error": "forbidden"})
     return await meta.readiness()
 
 

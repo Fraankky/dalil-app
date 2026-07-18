@@ -132,7 +132,7 @@ SELECT
     v.text_translation
 FROM verses v
 JOIN surahs s ON s.id = v.surah_id
-WHERE (v.text_translation ILIKE :pattern OR v.text_arabic ILIKE :pattern)
+WHERE (v.text_translation ILIKE :pattern ESCAPE '\' OR v.text_arabic ILIKE :pattern ESCAPE '\')
   AND :source_quran
 
 UNION ALL
@@ -157,7 +157,7 @@ FROM hadith h
 JOIN hadith_collections hc ON hc.id = h.collection_id
 LEFT JOIN hadith_books hb
     ON hb.collection_id = h.collection_id AND hb.book_number = h.chapter_id
-WHERE (h.text_translation ILIKE :pattern OR h.text_arabic ILIKE :pattern)
+WHERE (h.text_translation ILIKE :pattern ESCAPE '\' OR h.text_arabic ILIKE :pattern ESCAPE '\')
   AND :source_hadith
   AND (:all_hadith_collections OR hc.slug = ANY(CAST(:hadith_collections AS TEXT[])))
 
@@ -168,12 +168,12 @@ LIMIT :limit OFFSET :offset
 KEYWORD_COUNT = """
 SELECT count(*) FROM (
     SELECT 1 FROM verses v
-    WHERE (v.text_translation ILIKE :pattern OR v.text_arabic ILIKE :pattern)
+    WHERE (v.text_translation ILIKE :pattern ESCAPE '\' OR v.text_arabic ILIKE :pattern ESCAPE '\')
       AND :source_quran
     UNION ALL
     SELECT 1 FROM hadith h
     JOIN hadith_collections hc ON hc.id = h.collection_id
-    WHERE (h.text_translation ILIKE :pattern OR h.text_arabic ILIKE :pattern)
+    WHERE (h.text_translation ILIKE :pattern ESCAPE '\' OR h.text_arabic ILIKE :pattern ESCAPE '\')
       AND :source_hadith
       AND (:all_hadith_collections OR hc.slug = ANY(CAST(:hadith_collections AS TEXT[])))
 ) AS all_matches
@@ -208,6 +208,10 @@ def _hadith_collections(sources: list[str] | None) -> list[str]:
     return [source for source in (sources or []) if source in HADITH_SOURCES]
 
 
+def _escape_ilike(query: str) -> str:
+    return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def _keyword_params(
     query: str,
     sources: list[str] | None,
@@ -217,7 +221,7 @@ def _keyword_params(
     source_quran, source_hadith = _source_flags(sources)
     collections = _hadith_collections(sources)
     return {
-        "pattern": f"%{query}%",
+        "pattern": f"%{_escape_ilike(query)}%",
         "source_quran": source_quran,
         "source_hadith": source_hadith,
         "all_hadith_collections": not collections,
