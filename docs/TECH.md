@@ -450,7 +450,11 @@ Certbot + Let's Encrypt via docker-compose. nginx terminates TLS. Auto-renewal v
 
 ### 13.4 Migrations
 
-Automated via `entrypoint.sh` — runs `alembic upgrade head` before gunicorn starts. No manual migration step on deploy.
+Run as a one-shot compose service before deploy:
+```bash
+docker compose --profile migrate run --rm migrate
+```
+Migrations are NOT auto-run on container start. The `migrate` service must be run explicitly.
 
 ### 13.5 Re-ingest
 
@@ -462,6 +466,13 @@ docker compose run --rm backend python data/scripts/ingest.py
 
 `pg_dump` via cron on VPS host, shipped to object storage. Retention: 14 days local, 90 days remote.
 
-### 13.7 Secrets Rotation
+### 13.7 Security Notes
+
+- **API is public by design** — no authentication on search/browse endpoints. If write/admin endpoints are added later, add an auth dependency before them.
+- **Rate limiting** is enforced via SlowAPI (60 req/min per IP). The limiter trusts the single X-Forwarded-For hop set by nginx (`$remote_addr`, replace mode). Do NOT change nginx to `$proxy_add_x_forwarded_for` without also updating `limiter.py`.
+- **Redis** requires `REDIS_PASSWORD` in production. The password is embedded in `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND`.
+- **Migrations** are run explicitly via `docker compose --profile migrate run --rm migrate`, not on container start.
+
+### 13.8 Secrets Rotation
 
 Update `.env.prod` on VPS, then `docker compose down && docker compose up -d` to pick up new values.

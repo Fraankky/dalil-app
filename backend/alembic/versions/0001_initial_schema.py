@@ -110,6 +110,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    from app.core.config import settings
+
+    if settings.is_prod:
+        raise RuntimeError("downgrade() disabled in production")
     op.execute("DROP TABLE IF EXISTS embeddings CASCADE")
     op.execute("DROP TABLE IF EXISTS hadith CASCADE")
     op.execute("DROP TABLE IF EXISTS hadith_books CASCADE")
