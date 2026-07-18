@@ -8,7 +8,5 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-echo "Running alembic upgrade head..."
-alembic upgrade head
 echo "Starting gunicorn..."
 exec "$@"
