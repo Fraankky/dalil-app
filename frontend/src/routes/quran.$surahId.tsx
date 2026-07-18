@@ -1,7 +1,12 @@
+import { BackLink } from "@/components/BackLink";
+import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/Pagination";
+import { VerseCard } from "@/components/quran/VerseCard";
+import { Skeleton } from "@/components/ui";
 import { fetchSurahDetail } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useParams, useSearch } from "@tanstack/react-router";
+import { createRoute, useParams, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 const PER_PAGE = 10;
@@ -13,21 +18,31 @@ function SurahDetailPage() {
     queryKey: ["surah", surahId, page],
     queryFn: () => fetchSurahDetail(Number(surahId), page, PER_PAGE),
   });
+  useDocumentTitle(data ? `${data.surah.name_english} — Al-Qur'an — Dalil` : "Al-Qur'an — Dalil");
 
   if (isLoading) {
-    return <div className="max-w-4xl mx-auto px-4 py-8 text-neutral-400">Memuat surat...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <Skeleton className="h-5 w-32 mb-4" />
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-48 mb-8" />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders don't reorder
+            <Skeleton key={`s-${i}`} className="h-32 w-full rounded-card" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (isError) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/quran"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-        >
-          &larr; Kembali ke daftar surat
-        </Link>
-        <p className="text-neutral-500">Gagal memuat surat. Coba kembali ke daftar surat.</p>
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <BackLink to="/quran">&larr; Kembali ke daftar surat</BackLink>
+        <p className="text-[var(--text-3)] mt-4">
+          Gagal memuat surat. Coba kembali ke daftar surat.
+        </p>
       </div>
     );
   }
@@ -35,46 +50,18 @@ function SurahDetailPage() {
   if (!data) return null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          to="/quran"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-        >
-          &larr; Kembali ke daftar surat
-        </Link>
-        <h1 className="text-2xl font-bold text-neutral-900">{data.surah.name_english}</h1>
-        <p className="text-lg text-neutral-500 mt-1">{data.surah.name_arabic}</p>
-        <p className="text-sm text-neutral-400 mt-1">
-          {data.surah.verses_count} ayat &middot; Halaman {data.page} dari {data.total_pages}
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto px-5 py-10">
+      <BackLink to="/quran">&larr; Kembali ke daftar surat</BackLink>
+      <PageHeader
+        title={data.surah.name_english}
+        subtitle={data.surah.name_arabic}
+        meta={`${data.surah.verses_count} ayat &middot; Halaman ${data.page} dari ${data.total_pages}`}
+        className="mt-4"
+      />
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {data.verses.map((verse) => (
-          <Link
-            key={verse.id}
-            to="/quran/$surahId/$verseNumber"
-            params={{ surahId: String(data.surah.id), verseNumber: String(verse.verse_number) }}
-            className="block p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-7 h-7 flex items-center justify-center bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
-                {verse.verse_number}
-              </span>
-            </div>
-            <p
-              className="arabic-text text-xl leading-relaxed text-neutral-900 mb-3 text-right"
-              dir="rtl"
-            >
-              {verse.text_arabic}
-            </p>
-            {verse.text_translation && (
-              <p className="text-sm text-neutral-600 leading-relaxed border-l-2 border-emerald-200 pl-3">
-                {verse.text_translation}
-              </p>
-            )}
-          </Link>
+          <VerseCard key={verse.id} verse={verse} surahId={data.surah.id} />
         ))}
       </div>
 

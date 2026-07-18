@@ -1,13 +1,18 @@
 import { BookOpenIcon, SearchIcon } from "@/components/icons";
+import { Chip } from "@/components/ui";
+import { fetchStats } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
+import { useQuery } from "@tanstack/react-query";
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchStats } from "@/lib/api";
 import { rootRoute } from "./__root";
+
+const SEARCH_DEFAULTS = { activeTab: "all" as const, sources: "", showFilters: false };
 
 function HomePage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  useDocumentTitle("Dalil — Cari Ayat & Hadits");
 
   const { data: stats } = useQuery({
     queryKey: ["stats"],
@@ -21,7 +26,11 @@ function HomePage() {
       if (!query.trim()) return;
       navigate({
         to: "/search",
-        search: { q: query.trim(), page: 1 },
+        search: {
+          ...SEARCH_DEFAULTS,
+          q: query.trim(),
+          page: 1,
+        },
       });
     },
     [query, navigate],
@@ -29,27 +38,27 @@ function HomePage() {
 
   const handleSuggestion = (q: string) => {
     setQuery(q);
-    navigate({
-      to: "/search",
-      search: { q, page: 1 },
-    });
+    navigate({ to: "/search", search: { ...SEARCH_DEFAULTS, q, page: 1 } });
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pt-24 pb-16">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold tracking-tight text-neutral-900 mb-3">
-          Temukan Dalil Islam Berdasarkan Makna
+    <div className="max-w-3xl mx-auto px-5 pt-28 pb-16">
+      <div className="text-center mb-12">
+        <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--text-3)] mb-4">
+          Ensiklopedia Dalil Islam
+        </p>
+        <h1 className="font-serif text-4xl sm:text-5xl font-light tracking-tight text-[var(--text)] leading-[1.15] mb-4">
+          Temukan Dalil Berdasarkan Makna
         </h1>
-        <p className="text-lg text-neutral-500 max-w-xl mx-auto">
-          Cari ayat Al-Qur'an dan hadis dalam bahasa Arab, Inggris, atau transliterasi. Didukung
-          oleh AI semantik yang memahami maksud Anda.
+        <p className="text-base sm:text-lg text-[var(--text-2)] max-w-lg mx-auto leading-relaxed">
+          Cari ayat Al-Qur'an dan hadis dalam bahasa Arab, Inggris, atau transliterasi. Didukung AI
+          semantik.
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="relative mb-8">
-        <div className="flex items-center border-2 border-neutral-200 rounded-xl shadow-sm focus-within:border-emerald-500 focus-within:shadow-md transition-all">
-          <span className="pl-4 text-neutral-400">
+      <form onSubmit={handleSearch} className="relative mb-12">
+        <div className="flex items-center border border-[var(--border)] rounded-btn bg-white dark:bg-[var(--surface)] shadow-sm focus-within:border-[var(--accent)] focus-within:shadow-sm transition-all">
+          <span className="pl-4 text-[var(--text-3)]">
             <SearchIcon />
           </span>
           <input
@@ -57,100 +66,63 @@ function HomePage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder='Coba "sabar dalam Islam", "hak tetangga", atau "الصبر"'
-            className="w-full px-4 py-4 text-lg bg-transparent outline-none placeholder:text-neutral-300"
+            className="w-full px-4 py-3.5 text-base bg-transparent outline-none placeholder:text-[var(--text-3)]"
           />
           <button
             type="submit"
             disabled={!query.trim()}
-            className="m-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="m-1.5 px-5 py-2 text-sm font-medium text-white bg-[var(--accent)] rounded-btn hover:bg-[var(--accent-strong)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Cari
           </button>
         </div>
       </form>
 
-      <div className="text-center mb-6">
-        <span className="text-[11px] font-medium uppercase tracking-widest text-[#787774] mb-3 block">
+      <div className="text-center mb-4">
+        <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-[var(--text-3)] block mb-3">
           Populer
         </span>
         <div className="flex flex-wrap justify-center gap-2">
           {["Sabar", "Puasa", "Sholat", "Tawakal", "Sedekah", "Taubat", "Syukur", "Ikhlas"].map(
             (topic) => (
-              <button
-                key={topic}
-                type="button"
-                onClick={() => handleSuggestion(topic)}
-                className="px-3 py-1 text-xs font-medium rounded-full transition-colors bg-[#EDF3EC] text-[#346538] hover:bg-[#346538] hover:text-white"
-              >
+              <Chip key={topic} onClick={() => handleSuggestion(topic)}>
                 {topic}
-              </button>
+              </Chip>
             ),
           )}
         </div>
       </div>
 
-      <hr className="mx-auto max-w-xs border-t border-[#EAEAEA] mb-6" />
-
       {stats && (
-        <div className="mb-10">
-          <div className="flex flex-wrap justify-center gap-3 mb-4">
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
-              <BookOpenIcon className="size-4 text-neutral-700" />
-              <div>
-                <span className="font-semibold text-[#2F3437]">{stats.total_surahs}</span>
-                <span className="text-sm text-[#787774] ml-1">Surah</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
-              <BookOpenIcon className="size-4 text-neutral-700" />
-              <div>
-                <span className="font-semibold text-[#2F3437]">{stats.total_verses.toLocaleString("id")}</span>
-                <span className="text-sm text-[#787774] ml-1">Ayat</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
-              <BookOpenIcon className="size-4 text-neutral-700" />
-              <div>
-                <span className="font-semibold text-[#2F3437]">{stats.total_collections}</span>
-                <span className="text-sm text-[#787774] ml-1">Koleksi</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border" style={{ borderColor: "#EAEAEA" }}>
-              <BookOpenIcon className="size-4 text-neutral-700" />
-              <div>
-                <span className="font-semibold text-[#2F3437]">{stats.total_hadith.toLocaleString("id")}</span>
-                <span className="text-sm text-[#787774] ml-1">Hadits</span>
-              </div>
-            </div>
+        <div className="mt-14 pt-10 border-t border-[var(--border)]">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+            <StatCard value={stats.total_surahs} label="Surah" />
+            <StatCard value={stats.total_verses.toLocaleString("id")} label="Ayat" />
+            <StatCard value={stats.total_collections} label="Koleksi" />
+            <StatCard value={stats.total_hadith.toLocaleString("id")} label="Hadits" />
           </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
+          <div className="flex flex-wrap justify-center gap-2 mt-6">
+            <span className="px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded-full text-[var(--text-3)] border border-[var(--border)]">
               Tafsir Kemenag
             </span>
-            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
+            <span className="px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded-full text-[var(--text-3)] border border-[var(--border)]">
               Tafsir Quraish Shihab
             </span>
-            <span className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider rounded-full bg-[#E1F3FE] text-[#1F6C9F]">
+            <span className="px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded-full text-[var(--text-3)] border border-[var(--border)]">
               Tafsir Jalalayn
             </span>
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      <div className="flex flex-wrap justify-center gap-3">
-        {["Sabar dalam Islam", "Hak tetangga", "الصبر", "Ampunan", "Jujur dalam berdagang"].map(
-          (suggestion) => (
-            <button
-              type="button"
-              key={suggestion}
-              onClick={() => handleSuggestion(suggestion)}
-              className="px-4 py-1.5 text-sm bg-neutral-100 text-neutral-600 rounded-full hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-            >
-              {suggestion}
-            </button>
-          ),
-        )}
-      </div>
+function StatCard({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="font-serif text-2xl font-medium text-[var(--text)]">{value}</span>
+      <span className="text-sm text-[var(--text-3)]">{label}</span>
     </div>
   );
 }

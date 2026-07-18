@@ -1,11 +1,16 @@
+import { BackLink } from "@/components/BackLink";
+import { PageHeader } from "@/components/PageHeader";
+import { TafsirTabs } from "@/components/quran/TafsirTabs";
+import { Skeleton } from "@/components/ui";
 import { fetchSurahs, fetchVerseDetail } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, createRoute, useParams, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 function VerseDetailPage() {
   const { surahId, verseNumber } = useParams({ from: "/quran/$surahId/$verseNumber" });
+  const { tafsirTab, kemenagLong } = useSearch({ from: "/quran/$surahId/$verseNumber" });
   const numSurah = Number(surahId);
   const numVerse = Number(verseNumber);
 
@@ -20,8 +25,11 @@ function VerseDetailPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const [tafsirTab, setTafsirTab] = useState<"kemenag" | "quraish" | "jalalayn">("kemenag");
-  const [kemenagLong, setKemenagLong] = useState(false);
+  useDocumentTitle(
+    data
+      ? `${data.surah_name_english} Ayat ${data.verse_number} — Al-Qur'an — Dalil`
+      : "Al-Qur'an — Dalil",
+  );
 
   const surahMeta = surahs?.find((s) => s.id === numSurah);
   const totalVerses = surahMeta?.verses_count ?? 0;
@@ -30,22 +38,22 @@ function VerseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 text-neutral-400">Memuat detail ayat...</div>
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <Skeleton className="h-5 w-40 mb-4" />
+        <Skeleton className="h-8 w-64 mb-8" />
+        <Skeleton className="h-48 w-full rounded-card mb-8" />
+        <Skeleton className="h-32 w-full rounded-card" />
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/quran/$surahId"
-          search={{ page: 1 }}
-          params={{ surahId }}
-          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-        >
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <BackLink to="/quran/$surahId" params={{ surahId }} search={{ page: 1 }}>
           &larr; Kembali ke surat
-        </Link>
-        <p className="text-neutral-500">Gagal memuat detail ayat.</p>
+        </BackLink>
+        <p className="text-[var(--text-3)] mt-4">Gagal memuat detail ayat.</p>
       </div>
     );
   }
@@ -53,29 +61,24 @@ function VerseDetailPage() {
   if (!data) return null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-4">
-        <Link
-          to="/quran/$surahId"
-          search={{ page: 1 }}
-          params={{ surahId }}
-          className="text-sm text-emerald-600 hover:text-emerald-700 inline-block"
-        >
+    <div className="max-w-4xl mx-auto px-5 py-10">
+      <div className="flex items-center justify-between mb-6">
+        <BackLink to="/quran/$surahId" params={{ surahId }} search={{ page: 1 }}>
           &larr; Kembali ke surat
-        </Link>
+        </BackLink>
         <nav className="flex items-center gap-2" aria-label="Navigasi ayat">
           {hasPrev ? (
             <Link
               to="/quran/$surahId/$verseNumber"
               params={{ surahId: String(numSurah), verseNumber: String(numVerse - 1) }}
-              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all"
-              aria-label="Sebelumnya"
+              search={{ tafsirTab, kemenagLong }}
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded-btn text-[var(--text-2)] hover:border-[var(--accent)] transition-all"
             >
               &larr; Sebelumnya
             </Link>
           ) : (
             <span
-              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg opacity-30"
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded-btn opacity-30"
               aria-disabled="true"
             >
               &larr; Sebelumnya
@@ -85,14 +88,14 @@ function VerseDetailPage() {
             <Link
               to="/quran/$surahId/$verseNumber"
               params={{ surahId: String(numSurah), verseNumber: String(numVerse + 1) }}
-              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:border-emerald-300 transition-all"
-              aria-label="Selanjutnya"
+              search={{ tafsirTab, kemenagLong }}
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded-btn text-[var(--text-2)] hover:border-[var(--accent)] transition-all"
             >
               Berikutnya &rarr;
             </Link>
           ) : (
             <span
-              className="px-3 py-1 text-sm border border-neutral-200 rounded-lg opacity-30"
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded-btn opacity-30"
               aria-disabled="true"
             >
               Berikutnya &rarr;
@@ -101,81 +104,42 @@ function VerseDetailPage() {
         </nav>
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-neutral-900">
-          {data.surah_name_english} &mdash; Ayat {data.verse_number}
-        </h1>
-        <p className="text-base text-neutral-500 mt-1">
-          {data.surah_name_arabic} ({data.surah_number}:{data.verse_number})
-        </p>
-        {data.juz && <p className="text-sm text-neutral-400 mt-1">Juz {data.juz}</p>}
-      </div>
+      <PageHeader
+        title={`${data.surah_name_english} — Ayat ${data.verse_number}`}
+        subtitle={`${data.surah_name_arabic} (${data.surah_number}:${data.verse_number})`}
+        meta={data.juz ? `Juz ${data.juz}` : undefined}
+      />
 
-      <div className="p-6 border border-neutral-200 rounded-xl">
+      <div className="p-6 border border-[var(--border)] rounded-card bg-[var(--surface)]">
         <p
-          className="arabic-text text-2xl leading-loose text-neutral-900 mb-4 text-right"
+          className="arabic-text text-2xl leading-loose text-[var(--text)] mb-4 text-right"
           dir="rtl"
         >
           {data.text_arabic}
         </p>
         {data.text_translation && (
-          <p className="text-base text-neutral-600 leading-relaxed border-t border-neutral-200 pt-4">
+          <p className="text-base text-[var(--text-2)] leading-relaxed border-t border-[var(--border)] pt-4">
             {data.text_translation}
           </p>
         )}
       </div>
 
-      <div className="mt-8 p-6 border border-neutral-100 rounded-xl bg-neutral-50">
-        <h2 className="font-semibold text-neutral-800 mb-4">Tafsir dan Penjelasan</h2>
-        {data.tafsir ? (
-          <>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {(["kemenag", "quraish", "jalalayn"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setTafsirTab(tab)}
-                  className={`px-3 py-1 text-sm border rounded-lg transition-all ${
-                    tafsirTab === tab
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-700"
-                      : "border-neutral-200 text-neutral-600 hover:border-emerald-300"
-                  }`}
-                >
-                  {tab === "kemenag"
-                    ? "Kemenag"
-                    : tab === "quraish"
-                      ? "Quraish Shihab"
-                      : "Al-Jalalayn"}
-                </button>
-              ))}
-            </div>
-
-            {tafsirTab === "kemenag" && (
-              <div className="mb-3">
-                <button
-                  type="button"
-                  onClick={() => setKemenagLong(!kemenagLong)}
-                  className="px-2 py-0.5 text-xs border border-neutral-200 rounded text-neutral-600 hover:border-emerald-300"
-                >
-                  {kemenagLong ? "Ringkas" : "Panjang"}
-                </button>
-              </div>
-            )}
-
-            <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
-              {tafsirTab === "kemenag"
-                ? kemenagLong
-                  ? data.tafsir.kemenag_long || data.tafsir.kemenag_short
-                  : data.tafsir.kemenag_short || data.tafsir.kemenag_long
-                : tafsirTab === "quraish"
-                  ? data.tafsir.quraish
-                  : data.tafsir.jalalayn}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-neutral-400">Tafsir belum tersedia untuk ayat ini.</p>
-        )}
-      </div>
+      {data.tafsir ? (
+        <TafsirTabs
+          tafsir={data.tafsir}
+          surahId={numSurah}
+          verseNumber={numVerse}
+          tab={tafsirTab}
+          kemenagLong={kemenagLong}
+        />
+      ) : (
+        <div className="mt-8 p-6 border border-[var(--border)] rounded-card bg-[var(--surface-2)]">
+          <h2 className="font-serif text-lg font-medium text-[var(--text)] mb-2">
+            Tafsir dan Penjelasan
+          </h2>
+          <p className="text-sm text-[var(--text-3)]">Tafsir belum tersedia untuk ayat ini.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -184,4 +148,10 @@ export const verseDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/quran/$surahId/$verseNumber",
   component: VerseDetailPage,
+  validateSearch: (params: Record<string, unknown>) => ({
+    tafsirTab: ["kemenag", "quraish", "jalalayn"].includes(params.tafsirTab as string)
+      ? (params.tafsirTab as "kemenag" | "quraish" | "jalalayn")
+      : ("kemenag" as const),
+    kemenagLong: params.kemenagLong === "true" || params.kemenagLong === true || false,
+  }),
 });

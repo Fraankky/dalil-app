@@ -1,9 +1,13 @@
+import { PageHeader } from "@/components/PageHeader";
+import { SurahCard, SurahListSkeleton } from "@/components/quran/SurahCard";
 import { fetchSurahs } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute } from "@tanstack/react-router";
+import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 function QuranPage() {
+  useDocumentTitle("Al-Qur'an — Dalil");
   const {
     data: surahs,
     isLoading,
@@ -14,41 +18,22 @@ function QuranPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-2">Jelajahi Al-Qur&apos;an</h1>
-      <p className="text-neutral-500 mb-8">
-        Pilih surat untuk membaca ayat Arab dan terjemahannya.
-      </p>
+    <div className="max-w-4xl mx-auto px-5 py-10">
+      <PageHeader
+        title="Jelajahi Al-Qur'an"
+        subtitle="Pilih surat untuk membaca ayat Arab dan terjemahannya."
+      />
 
-      {isLoading && <p className="text-neutral-400">Memuat daftar surat...</p>}
-
-      {isError && (
-        <p className="text-red-500">Gagal memuat daftar surat. Coba muat ulang halaman.</p>
+      {isLoading && <SurahListSkeleton />}
+      {isError && <p className="text-red-500">Gagal memuat daftar surat. Coba muat ulang.</p>}
+      {surahs && surahs.length === 0 && (
+        <p className="text-[var(--text-3)]">Belum ada data surat.</p>
       )}
-
-      {surahs && surahs.length === 0 && <p className="text-neutral-400">Belum ada data surat.</p>}
 
       {surahs && surahs.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {surahs.map((surah) => (
-            <Link
-              key={surah.id}
-              to="/quran/$surahId"
-              search={{ page: 1 }}
-              params={{ surahId: String(surah.id) }}
-              className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
-                  {surah.id}
-                </span>
-                <div>
-                  <p className="font-medium text-neutral-900">{surah.name_english}</p>
-                  <p className="text-xs text-neutral-400">{surah.name_arabic}</p>
-                </div>
-              </div>
-              <span className="text-xs text-neutral-400">{surah.verses_count} ayat</span>
-            </Link>
+            <SurahCard key={surah.id} surah={surah} />
           ))}
         </div>
       )}

@@ -1,7 +1,12 @@
+import { BackLink } from "@/components/BackLink";
+import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/Pagination";
+import { HadithCard } from "@/components/hadith/HadithCard";
+import { Skeleton } from "@/components/ui";
 import { fetchCollectionHadith } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useParams, useSearch } from "@tanstack/react-router";
+import { createRoute, useParams, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 function HadithCollectionPage() {
@@ -11,71 +16,52 @@ function HadithCollectionPage() {
     queryKey: ["hadith", slug, page],
     queryFn: () => fetchCollectionHadith(slug, page, 20),
   });
+  useDocumentTitle(data ? `${data.collection.name_eng} — Hadis — Dalil` : "Hadis — Dalil");
 
   if (isLoading) {
-    return <div className="max-w-4xl mx-auto px-4 py-8 text-neutral-400">Memuat hadis...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <Skeleton className="h-5 w-32 mb-4" />
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-40 mb-8" />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders don't reorder
+            <Skeleton key={`s-${i}`} className="h-32 w-full rounded-card" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (isError) {
-    return <p className="max-w-4xl mx-auto px-4 py-8 text-red-500">Gagal memuat hadis.</p>;
+    return <p className="max-w-4xl mx-auto px-5 py-10 text-red-500">Gagal memuat hadis.</p>;
   }
 
   if (!data) return null;
 
   if (data.hadiths.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <a
-          href="/hadith"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-        >
-          &larr; Kembali ke daftar kitab
-        </a>
-        <p className="text-neutral-400">Belum ada hadis pada halaman ini.</p>
+      <div className="max-w-4xl mx-auto px-5 py-10">
+        <BackLink to="/hadith">&larr; Kembali ke daftar kitab</BackLink>
+        <p className="text-[var(--text-3)] mt-4">Belum ada hadis pada halaman ini.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <a
-          href="/hadith"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 inline-block"
-        >
-          &larr; Kembali ke daftar kitab
-        </a>
-        <h1 className="text-2xl font-bold text-neutral-900">{data.collection.name_eng}</h1>
-        <p className="text-lg text-neutral-500 mt-1">{data.collection.name_ar}</p>
-        <p className="text-sm text-neutral-400 mt-1">{data.total} hadis</p>
-      </div>
+    <div className="max-w-4xl mx-auto px-5 py-10">
+      <BackLink to="/hadith">&larr; Kembali ke daftar kitab</BackLink>
+      <PageHeader
+        title={data.collection.name_eng}
+        subtitle={data.collection.name_ar}
+        meta={`${data.total} hadis`}
+        className="mt-4"
+      />
 
       <div className="space-y-4">
         {data.hadiths.map((h) => (
-          <a
-            key={h.id}
-            href={`/hadith/${slug}/${h.id}`}
-            className="block p-4 border border-neutral-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                #{h.hadith_number}
-              </span>
-              {h.grade && <span className="text-xs text-neutral-400">{h.grade}</span>}
-              {h.book_name && <span className="text-xs text-neutral-400">{h.book_name}</span>}
-            </div>
-            <p
-              className="arabic-text text-lg leading-relaxed text-neutral-900 mb-3 text-right"
-              dir="rtl"
-            >
-              {h.text_arabic}
-            </p>
-            {h.text_translation && (
-              <p className="text-sm text-neutral-600 leading-relaxed border-l-2 border-emerald-200 pl-3">
-                {h.text_translation}
-              </p>
-            )}
-          </a>
+          <HadithCard key={h.id} hadith={h} slug={slug} />
         ))}
       </div>
 

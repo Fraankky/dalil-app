@@ -1,8 +1,11 @@
-import { BookOpenIcon, FilterIcon, SearchIcon, StarIcon } from "@/components/icons";
-import { type SearchResult, fetchSearch } from "@/lib/api";
+import { FilterIcon } from "@/components/icons";
+import { ResultCard } from "@/components/search/ResultCard";
+import { SearchBar } from "@/components/search/SearchBar";
+import { SearchSkeleton } from "@/components/search/SearchSkeleton";
+import { fetchSearch } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link, createRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { createRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { rootRoute } from "./__root";
 
 const HADITH_SOURCES = [
@@ -18,74 +21,82 @@ const HADITH_SOURCES = [
 ];
 
 const HADITH_SLUGS = HADITH_SOURCES.map((s) => s.slug);
-
-function highlightMatch(text: string | null, query: string): ReactNode {
-  if (!text || !query) return text ?? null;
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
-  if (parts.length <= 1) return text;
-  return parts.map((part, i) =>
-    part.toLowerCase() === query.toLowerCase() ? <mark key={i} className="bg-yellow-200 rounded-sm">{part}</mark> : part,
-  );
-}
+const TAB_LABELS = ["Semua", "Qur'an", "Hadits"] as const;
 
 function SearchPage() {
   const navigate = useNavigate();
-  const { q, page } = useSearch({ from: "/search" });
-  const [inputValue, setInputValue] = useState(q || "");
-  const [activeTab, setActiveTab] = useState<"all" | "quran" | "hadith">("all");
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
+  const { q, page, activeTab, sources, showFilters } = useSearch({ from: "/search" });
+  useDocumentTitle(q ? `Cari: ${q} — Dalil` : "Cari — Dalil");
 
-  const sourcesParam = (() => {
-    if (activeTab === "all") return undefined;
-    if (activeTab === "quran") return "quran";
-    return selectedSources.length > 0 ? selectedSources.join(",") : HADITH_SLUGS.join(",");
-  })();
+  const selectedSources = sources ? sources.split(",").filter(Boolean) : [];
+  const sourcesParam =
+    activeTab === "all"
+      ? undefined
+      : activeTab === "quran"
+        ? "quran"
+        : selectedSources.length > 0
+          ? selectedSources.join(",")
+          : HADITH_SLUGS.join(",");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["search", q, page, activeTab, selectedSources],
-    queryFn: () =>
-      fetchSearch({
-        q,
-        limit: 20,
-        offset: (page - 1) * 20,
-        sources: sourcesParam,
-      }),
+    queryKey: ["search", q, page, activeTab, sources],
+    queryFn: () => fetchSearch({ q, limit: 20, offset: (page - 1) * 20, sources: sourcesParam }),
     enabled: !!q,
   });
 
+  const nav = (
+    overrides: Partial<{
+      q: string;
+      page: number;
+      activeTab: typeof activeTab;
+      sources: string;
+      showFilters: boolean;
+    }>,
+  ) => {
+    navigate({
+      to: "/search",
+      search: { q, page: 1, activeTab, sources, showFilters, ...overrides },
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim()) {
-      navigate({ to: "/search", search: { q: inputValue.trim(), page: 1 } });
+    const val = (e.target as HTMLFormElement).querySelector<HTMLInputElement>(
+      'input[name="q"]',
+    )?.value;
+    if (val?.trim()) {
+      navigate({
+        to: "/search",
+        search: { q: val.trim(), page: 1, activeTab, sources, showFilters },
+      });
     }
   };
 
-  const handleTabChange = (tab: "all" | "quran" | "hadith") => {
-    setActiveTab(tab);
-    if (tab !== "hadith") setShowFilters(false);
-    navigate({ to: "/search", search: { q, page: 1 } });
+  const handleTabChange = (tab: typeof activeTab) => {
+    nav({
+      activeTab: tab,
+      showFilters: tab === "hadith" ? showFilters : false,
+      sources: "",
+      page: 1,
+    });
   };
 
   const toggleSource = (slug: string) => {
     if (activeTab !== "hadith") return;
-    setSelectedSources((prev) => {
-      if (prev.length === 0) return HADITH_SLUGS.filter((s) => s !== slug);
-      if (prev.includes(slug)) {
-        const next = prev.filter((s) => s !== slug);
-        return next.length === 0 ? [] : next;
-      }
-      return [...prev, slug];
-    });
-    navigate({ to: "/search", search: { q, page: 1 } });
+    const next =
+      selectedSources.length === 0
+        ? HADITH_SLUGS.filter((s) => s !== slug).join(",")
+        : selectedSources.includes(slug)
+          ? selectedSources.filter((s) => s !== slug).join(",")
+          : [...selectedSources, slug].join(",");
+    nav({ sources: next });
   };
 
   if (!q) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <SearchBar value={inputValue} onChange={setInputValue} onSubmit={handleSubmit} />
-        <div className="text-center pt-16 text-neutral-400">
+      <div className="max-w-3xl mx-auto px-5 py-8">
+        <SearchBar onSubmit={handleSubmit} />
+        <div className="text-center pt-20 text-[var(--text-3)]">
           Masukkan kata kunci untuk mulai mencari dalil.
         </div>
       </div>
@@ -93,53 +104,56 @@ function SearchPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="max-w-4xl mx-auto px-5 py-8">
+      <div className="flex items-center gap-2 mb-5">
         <div className="flex-1">
-          <SearchBar value={inputValue} onChange={setInputValue} onSubmit={handleSubmit} />
+          <SearchBar onSubmit={handleSubmit} />
         </div>
         <button
           type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className={`p-3 border-2 rounded-xl transition-all ${
-            showFilters ? "border-emerald-500 bg-emerald-50" : "border-neutral-200"
+          onClick={() => nav({ showFilters: !showFilters })}
+          className={`p-3 border rounded-btn transition-all text-[var(--text-2)] ${
+            showFilters
+              ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
+              : "border-[var(--border)]"
           }`}
         >
           <FilterIcon />
         </button>
       </div>
 
-      <div className="flex gap-1 mb-5 p-1 bg-neutral-100 rounded-xl">
-        {(["all", "quran", "hadith"] as const).map((tab) => {
-          const label = tab === "all" ? "Semua" : tab === "quran" ? "Qur'an" : "Hadits";
-          return (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => handleTabChange(tab)}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab ? "bg-white text-emerald-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
+      <div className="flex gap-1 mb-6 p-1 bg-[var(--surface-2)] rounded-btn">
+        {(["all", "quran", "hadith"] as const).map((tab, i) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => handleTabChange(tab)}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              activeTab === tab
+                ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                : "text-[var(--text-2)] hover:text-[var(--text)]"
+            }`}
+          >
+            {TAB_LABELS[i]}
+          </button>
+        ))}
       </div>
 
       {showFilters && activeTab === "hadith" && (
-        <div className="mb-6 p-4 border border-neutral-200 rounded-xl bg-neutral-50">
-          <p className="text-sm font-medium text-neutral-700 mb-2">Filter sumber:</p>
+        <div className="mb-6 p-4 border border-[var(--border)] rounded-btn bg-[var(--surface-2)]">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-3)] mb-3">
+            Filter sumber hadits:
+          </p>
           <div className="flex flex-wrap gap-2">
             {HADITH_SOURCES.map((s) => (
               <button
                 key={s.slug}
                 type="button"
                 onClick={() => toggleSource(s.slug)}
-                className={`px-3 py-1 text-xs rounded-full border transition-all ${
+                className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
                   selectedSources.length === 0 || selectedSources.includes(s.slug)
-                    ? "bg-emerald-600 text-white border-emerald-600"
-                    : "bg-white text-neutral-600 border-neutral-300 hover:border-emerald-400"
+                    ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                    : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:border-[var(--accent)]"
                 }`}
               >
                 {s.label}
@@ -148,10 +162,7 @@ function SearchPage() {
             {selectedSources.length > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedSources([]);
-                  navigate({ to: "/search", search: { q, page: 1 } });
-                }}
+                onClick={() => nav({ sources: "" })}
                 className="px-3 py-1 text-xs rounded-full border border-red-200 text-red-500 hover:bg-red-50"
               >
                 Hapus semua
@@ -161,12 +172,12 @@ function SearchPage() {
         </div>
       )}
 
-      {isLoading && <LoadingSkeleton />}
+      {isLoading && <SearchSkeleton />}
       {error && <div className="text-red-500 mt-4">{error.message}</div>}
 
       {data && (
         <>
-          <div className="flex items-center justify-between text-sm text-neutral-500 mt-6 mb-4">
+          <div className="flex items-center justify-between text-sm text-[var(--text-3)] mt-4 mb-5">
             <span>
               {data.total.toLocaleString()} hasil &middot; {data.took_ms}ms
             </span>
@@ -174,202 +185,74 @@ function SearchPage() {
 
           <div className="space-y-4">
             {data.results.map((result, i) => (
-              <ResultCard key={`${result.type}-${result.source_id}-${i}`} result={result} query={q} />
+              <ResultCard
+                key={`${result.type}-${result.source_id}-${i}`}
+                result={result}
+                query={q}
+              />
             ))}
           </div>
 
           {data.results.length === 0 && (
-            <div className="text-center py-16 text-neutral-400">
-              Tidak ada hasil ditemukan. Coba kata kunci lain atau istilah yang lebih umum.
+            <div className="text-center py-20 text-[var(--text-3)]">
+              <p className="font-serif text-lg text-[var(--text-2)] mb-2">Tidak ada hasil</p>
+              <p className="text-sm">Coba kata kunci lain atau istilah yang lebih umum.</p>
             </div>
           )}
 
-          {data.pages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => navigate({ to: "/search", search: { q, page: page - 1 } })}
-                className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
-              >
-                Sebelumnya
-              </button>
-              {Array.from({ length: Math.min(data.pages, 10) }, (_, i) => {
-                const start = Math.max(1, page - 4);
-                const p = start + i;
-                if (p > data.pages) return null;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => navigate({ to: "/search", search: { q, page: p } })}
-                    className={`w-9 h-9 text-sm rounded-lg transition-all ${
-                      p === page
-                        ? "bg-emerald-600 text-white"
-                        : "border border-neutral-200 hover:border-emerald-300"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                disabled={page >= data.pages}
-                onClick={() => navigate({ to: "/search", search: { q, page: page + 1 } })}
-                className="px-4 py-2 text-sm border border-neutral-200 rounded-lg disabled:opacity-40 hover:border-emerald-300 transition-all"
-              >
-                Berikutnya
-              </button>
-            </div>
-          )}
+          {data.pages > 1 && <SearchPagination total={data.pages} current={page} nav={nav} />}
         </>
       )}
     </div>
   );
 }
 
-function SearchBar({
-  value,
-  onChange,
-  onSubmit,
+function SearchPagination({
+  total,
+  current,
+  nav,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  total: number;
+  current: number;
+  nav: (overrides: { page: number }) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="flex items-center gap-2">
-      <div className="flex-1 flex items-center border-2 border-neutral-200 rounded-xl focus-within:border-emerald-500 transition-all">
-        <span className="pl-3 text-neutral-400">
-          <SearchIcon />
-        </span>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-3 bg-transparent outline-none"
-          aria-label="Cari dalil"
-          placeholder="Perbaiki pencarian..."
-        />
-      </div>
+    <div className="flex items-center justify-center gap-2 mt-8">
       <button
-        type="submit"
-        className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+        type="button"
+        disabled={current <= 1}
+        onClick={() => nav({ page: current - 1 })}
+        className="px-4 py-2 text-sm border border-[var(--border)] rounded-btn disabled:opacity-30 hover:border-[var(--accent)] text-[var(--text-2)] transition-all"
       >
-        Cari
+        Sebelumnya
       </button>
-    </form>
-  );
-}
-
-function ResultCard({ result, query }: { result: SearchResult; query: string }) {
-  const linkProps:
-    | { to: "/quran/$surahId/$verseNumber"; params: { surahId: string; verseNumber: string } }
-    | { to: "/quran/$surahId"; params: { surahId: string } }
-    | { to: "/hadith/$slug/$hadithId"; params: { slug: string; hadithId: string } }
-    | { to: "/hadith/$slug"; params: { slug: string } }
-    | null = (() => {
-    if (result.type === "quran" && result.surah_number && result.verse_number) {
-      return {
-        to: "/quran/$surahId/$verseNumber",
-        params: { surahId: String(result.surah_number), verseNumber: String(result.verse_number) },
-      };
-    }
-    if (result.type === "quran" && result.surah_number) {
-      return {
-        to: "/quran/$surahId",
-        params: { surahId: String(result.surah_number) },
-      };
-    }
-    if (result.type === "hadith" && result.collection_slug && result.source_id) {
-      return {
-        to: "/hadith/$slug/$hadithId",
-        params: { slug: result.collection_slug, hadithId: String(result.source_id) },
-      };
-    }
-    if (result.type === "hadith" && result.collection_slug) {
-      return {
-        to: "/hadith/$slug",
-        params: { slug: result.collection_slug },
-      };
-    }
-    return null;
-  })();
-
-  const card = (
-    <div className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 hover:shadow-sm transition-all">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {result.type === "quran" && (
-            <>
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                <BookOpenIcon className="w-3 h-3" />
-                QS {result.surah_number}:{result.verse_number}
-              </span>
-              {result.surah_name && (
-                <span className="text-sm font-medium text-neutral-700">{result.surah_name}</span>
-              )}
-            </>
-          )}
-          {result.type === "hadith" && result.hadith_number && (
-            <>
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                <BookOpenIcon className="w-3 h-3" />
-                No. {result.hadith_number}
-              </span>
-              <span className="text-sm font-medium text-neutral-700">{result.collection_name}</span>
-              {result.grade && (
-                <span className="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded">
-                  {result.grade}
-                </span>
-              )}
-            </>
-          )}
-          {result.type === "hadith" && !result.hadith_number && (
-            <span className="text-sm font-medium text-neutral-700">{result.collection_name}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-xs shrink-0">
-          <StarIcon className="text-amber-400 w-3.5 h-3.5" />
-          <span className="font-medium text-neutral-600">{result.relevance}%</span>
-        </div>
-      </div>
-
-      <p className="arabic-text mb-3 text-neutral-800" dir="rtl">
-        {result.text_arabic}
-      </p>
-
-      {result.text_translation && (
-        <p className="text-sm text-neutral-600 border-t border-neutral-100 pt-3 leading-relaxed">
-          {highlightMatch(result.text_translation, query)}
-        </p>
-      )}
-
-      {result.type === "hadith" && result.chapter_name && (
-        <p className="text-xs text-neutral-400 mt-2">Bab: {result.chapter_name}</p>
-      )}
-    </div>
-  );
-
-  if (linkProps) {
-    return <Link {...linkProps}>{card}</Link>;
-  }
-  return card;
-}
-
-function LoadingSkeleton() {
-  const skeletonKeys = ["first", "second", "third", "fourth", "fifth"];
-
-  return (
-    <div className="space-y-4 mt-6 animate-pulse">
-      {skeletonKeys.map((key) => (
-        <div key={key} className="border border-neutral-200 rounded-xl p-5">
-          <div className="h-4 bg-neutral-100 rounded w-1/3 mb-3" />
-          <div className="h-16 bg-neutral-50 rounded mb-3" />
-          <div className="h-4 bg-neutral-100 rounded w-2/3" />
-        </div>
-      ))}
+      {Array.from({ length: Math.min(total, 10) }, (_, i) => {
+        const start = Math.max(1, current - 4);
+        const p = start + i;
+        if (p > total) return null;
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => nav({ page: p })}
+            className={`w-9 h-9 text-sm rounded-btn transition-all ${
+              p === current
+                ? "bg-[var(--accent)] text-white"
+                : "border border-[var(--border)] text-[var(--text-2)] hover:border-[var(--accent)]"
+            }`}
+          >
+            {p}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        disabled={current >= total}
+        onClick={() => nav({ page: current + 1 })}
+        className="px-4 py-2 text-sm border border-[var(--border)] rounded-btn disabled:opacity-30 hover:border-[var(--accent)] text-[var(--text-2)] transition-all"
+      >
+        Berikutnya
+      </button>
     </div>
   );
 }
@@ -377,11 +260,14 @@ function LoadingSkeleton() {
 export const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
-  validateSearch: (params: Record<string, unknown>): { q: string; page: number } => {
-    return {
-      q: typeof params.q === "string" ? params.q : "",
-      page: Number(params.page) || 1,
-    };
-  },
+  validateSearch: (params: Record<string, unknown>) => ({
+    q: typeof params.q === "string" ? params.q : "",
+    page: Number(params.page) || 1,
+    activeTab: (["all", "quran", "hadith"] as string[]).includes(params.activeTab as string)
+      ? (params.activeTab as "all" | "quran" | "hadith")
+      : ("all" as const),
+    sources: typeof params.sources === "string" ? params.sources : "",
+    showFilters: params.showFilters === "true" || params.showFilters === true,
+  }),
   component: SearchPage,
 });
